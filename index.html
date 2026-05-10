@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智算中心参数面网络拓扑生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-200 h-screen w-screen overflow-hidden flex">
+
+    <!-- 侧边栏 -->
+    <aside id="sidebar" class="bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-2xl shrink-0 relative">
+        <div class="sidebar-gradient"></div>
+
+        <!-- 折叠切换按钮 -->
+        <div id="sidebarToggle" role="button" aria-label="切换侧边栏">
+            <svg id="toggleIcon" xmlns="http://www.w3.org/2000/svg" class="shrink-0" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </div>
+
+        <div class="p-4 border-b border-slate-800 relative z-10 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 text-blue-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+            <span class="sidebar-header-text font-title text-white">智算拓扑生成器</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 sidebar-content">
+            <div>
+                <label class="block font-label text-slate-300 mb-1">算力服务器数量</label>
+                <select id="serverCount" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="64">64 台</option>
+                    <option value="128" selected>128 台</option>
+                    <option value="256">256 台</option>
+                    <option value="512">512 台</option>
+                    <option value="1024">1024 台</option>
+                </select>
+                <p class="font-tiny text-slate-500 mt-1">为保证渲染性能，将展示典型结构代表</p>
+            </div>
+
+            <div>
+                <label class="block font-label text-slate-300 mb-1">GPU规格 / 网卡配置</label>
+                <select id="gpuType" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="A800_4">NVIDIA A800 (4-Rail)</option>
+                    <option value="H800_8">NVIDIA H800 (8-Rail)</option>
+                    <option value="B300_8" selected>NVIDIA B300 (8-Rail, 8x 800G)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-label text-slate-300 mb-1">组网架构</label>
+                <select id="architecture" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="ruijie-dual" selected>锐捷虚拟双平面 (去堆叠Bond/VRF逃生)</option>
+                </select>
+            </div>
+
+            <button id="btnGenerate" class="btn-primary">重新生成拓扑</button>
+
+            <!-- 硬件测算结果 -->
+            <div>
+                <h3 class="font-section text-slate-200 mb-2 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-emerald-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    硬件测算结果
+                </h3>
+                <div id="summaryPanel" class="font-small text-slate-400 space-y-1 leading-relaxed">
+                    正在初始化...
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主区域 -->
+    <main class="flex-1 relative overflow-hidden">
+        <div class="bg-grid"></div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button id="btnResetZoom" title="适应屏幕">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                </button>
+                <div class="toolbar-sep"></div>
+                <button id="btnZoomIn" title="放大">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                </button>
+                <button id="btnZoomOut" title="缩小">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" /></svg>
+                </button>
+            </div>
+            <div class="toolbar-group">
+                <button id="btnExportSvg" title="导出 SVG">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                </button>
+                <button id="btnExportPng" title="导出 PNG">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </button>
+                <div class="toolbar-sep"></div>
+                <button id="btnResetSettings" title="重置默认配置">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tooltip -->
+        <div id="tooltip"></div>
+
+        <!-- SVG 容器 -->
+        <div id="svgContainer" class="w-full h-full relative cursor-grab">
+            <svg id="topologySvg" class="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <!-- 阴影效果 -->
+                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.6"/>
+                    </filter>
+
+                    <!-- 发光效果 (用于高亮连线) -->
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+
+                    <!-- Plane 1 (Blue) 设备渐变 -->
+                    <linearGradient id="grad-blue" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#2563eb"/>
+                        <stop offset="100%" stop-color="#1e3a8a"/>
+                    </linearGradient>
+
+                    <!-- Plane 2 (Orange) 设备渐变 -->
+                    <linearGradient id="grad-orange" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#ea580c"/>
+                        <stop offset="100%" stop-color="#7c2d12"/>
+                    </linearGradient>
+
+                    <!-- Server (Dark Steel) 设备渐变 -->
+                    <linearGradient id="grad-server" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b"/>
+                        <stop offset="100%" stop-color="#0f172a"/>
+                    </linearGradient>
+
+                    <!-- LACP 聚合标记图案 -->
+                    <pattern id="stripes" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                        <rect width="4" height="8" fill="rgba(255,255,255,0.1)"></rect>
+                    </pattern>
+                </defs>
+                <g id="bgLayer"></g>
+                <g id="linkLayer"></g>
+                <g id="nodeLayer"></g>
+            </svg>
+        </div>
+
+        <!-- 底部操作提示浮动条 -->
+        <div class="hint-bar">
+            <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                悬停设备查看链路
+            </span>
+            <span class="hint-sep">|</span>
+            <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+                滚轮缩放
+            </span>
+            <span class="hint-sep">|</span>
+            <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                拖拽平移
+            </span>
+        </div>
+
+        <!-- 网络设备统计信息浮动面板 -->
+        <div id="hardwareStatsContainer" class="hidden">
+            <div id="hwFloatPanel">
+                <div class="panel-header" id="statsPanelHeader">
+                    <div class="header-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-amber-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>网络设备统计信息</span>
+                    </div>
+                    <div class="toggle-btn" id="statsToggleBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="flex gap-2 mb-2">
+                        <span class="stat-tab active" data-tab="compute" id="tabCompute">计算网</span>
+                        <span class="stat-tab" data-tab="storage" id="tabStorage">存储网</span>
+                    </div>
+                    <div id="statsContent" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

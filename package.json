@@ -1,0 +1,11 @@
+{
+  "name": "aidc-network-diagram",
+  "version": "1.0.0",
+  "description": "AIDC 网络拓扑图可视化项目",
+  "scripts": {
+    "start": "node server.js",
+    "build-inline": "node build-inline.js"
+  },
+  "keywords": ["AIDC", "network", "topology", "visualization"],
+  "license": "UNLICENSED"
+}
