@@ -571,9 +571,45 @@ select:focus {
             </div>
 
             <div>
+                <label class="block font-label text-slate-300 mb-1">算力服务器存储网卡配置</label>
+                <select id="serverStorageNic" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="BF3_2x200G">BF3 2 * 200G</option>
+                    <option value="CX7_2x200G">CX7 2 * 200G</option>
+                    <option value="CX7_400G" selected>CX7 400G</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-label text-slate-300 mb-1">存储服务器数量</label>
+                <input id="storageServerCount" type="number" min="0" max="1024" step="1" value="12"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                <p class="font-tiny text-slate-500 mt-1">根据算力服务器自动推荐，可手动调整</p>
+            </div>
+
+            <div>
+                <label class="block font-label text-slate-300 mb-1">存储网卡配置</label>
+                <select id="storageNic" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="BF3_2x200G">BF3 2 * 200G</option>
+                    <option value="CX7_2x200G">CX7 2 * 200G</option>
+                    <option value="CX7_400G" selected>CX7 400G</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-label text-slate-300 mb-1">存储网卡数量</label>
+                <select id="storageNicCount" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+
+            <div>
                 <label class="block font-label text-slate-300 mb-1">组网架构</label>
                 <select id="architecture" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="ruijie-dual" selected>锐捷虚拟双平面 (去堆叠Bond/VRF逃生)</option>
+                    <option value="single-plane">单平面组网</option>
+                    <option value="physical-dual-plane">物理双平面组网</option>
+                    <option value="virtual-dual-plane" selected>虚拟双平面组网</option>
                 </select>
             </div>
 
@@ -797,6 +833,20 @@ const LAYOUT = Object.freeze({
     viewBoxDefault: { x: 0, y: 0, w: 2800, h: 1600 }
 });
 
+/** 存储网卡规格配置表 */
+const STORAGE_NIC_SPECS = Object.freeze({
+    BF3_2x200G: { label: 'BF3 2 * 200G', speed: '200G', portCount: 2, totalBandwidth: '400G' },
+    CX7_2x200G: { label: 'CX7 2 * 200G', speed: '200G', portCount: 2, totalBandwidth: '400G' },
+    CX7_400G:   { label: 'CX7 400G',     speed: '400G', portCount: 1, totalBandwidth: '400G' }
+});
+
+/** 组网架构选项 */
+const ARCHITECTURE_TYPES = Object.freeze({
+    'single-plane':         { label: '单平面组网',       planes: 1, mode: 'single' },
+    'physical-dual-plane':  { label: '物理双平面组网',   planes: 2, mode: 'physical' },
+    'virtual-dual-plane':   { label: '虚拟双平面组网',   planes: 2, mode: 'virtual' }
+});
+
 /** 架构常量 */
 const ARCHITECTURE = Object.freeze({
     TWO_TIER_MAX: 512,
@@ -850,6 +900,11 @@ const appState = {
     serverCount: 128,
     gpuType: 'B300_8',
     railCount: 8,
+    serverStorageNic: 'CX7_400G',      // 算力服务器存储网卡配置
+    storageServerCount: 12,              // 存储服务器数量
+    storageNic: 'CX7_400G',             // 存储网卡配置
+    storageNicCount: 2,                  // 存储网卡数量
+    architecture: 'virtual-dual-plane',  // 组网架构
     viewBox: { ...LAYOUT.viewBoxDefault },
     cachedHardwareData: null,
     cachedServerCount: null,  // 用于判断缓存是否命中
@@ -895,6 +950,10 @@ function getGpuPrefix() {
 
 const STORAGE_KEY = 'aidc-topology-settings';
 
+const VALID_NIC_TYPES = ['BF3_2x200G', 'CX7_2x200G', 'CX7_400G'];
+const VALID_ARCHITECTURES = ['single-plane', 'physical-dual-plane', 'virtual-dual-plane'];
+const VALID_NIC_COUNTS = [1, 2, 4];
+
 /**
  * 获取默认配置
  * @returns {Object}
@@ -903,6 +962,11 @@ function getDefaults() {
     return {
         serverCount: 128,
         gpuType: 'B300_8',
+        serverStorageNic: 'CX7_400G',
+        storageServerCount: 12,
+        storageNic: 'CX7_400G',
+        storageNicCount: 2,
+        architecture: 'virtual-dual-plane',
         currentStatsTab: 'compute',
         viewBox: { ...LAYOUT.viewBoxDefault },
         settings: {
@@ -920,6 +984,11 @@ function saveSettings() {
         const payload = {
             serverCount: appState.serverCount,
             gpuType: appState.gpuType,
+            serverStorageNic: appState.serverStorageNic,
+            storageServerCount: appState.storageServerCount,
+            storageNic: appState.storageNic,
+            storageNicCount: appState.storageNicCount,
+            architecture: appState.architecture,
             currentStatsTab: appState.currentStatsTab,
             viewBox: { ...appState.viewBox },
             settings: { ...appState.settings }
@@ -947,6 +1016,19 @@ function loadSettings() {
         const gpuType = ['A800_4', 'H800_8', 'B300_8'].includes(parsed.gpuType)
             ? parsed.gpuType
             : defaults.gpuType;
+        const serverStorageNic = VALID_NIC_TYPES.includes(parsed.serverStorageNic)
+            ? parsed.serverStorageNic
+            : defaults.serverStorageNic;
+        const storageServerCount = Math.min(1024, Math.max(0, Number(parsed.storageServerCount) ?? defaults.storageServerCount));
+        const storageNic = VALID_NIC_TYPES.includes(parsed.storageNic)
+            ? parsed.storageNic
+            : defaults.storageNic;
+        const storageNicCount = VALID_NIC_COUNTS.includes(Number(parsed.storageNicCount))
+            ? Number(parsed.storageNicCount)
+            : defaults.storageNicCount;
+        const architecture = VALID_ARCHITECTURES.includes(parsed.architecture)
+            ? parsed.architecture
+            : defaults.architecture;
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
@@ -954,6 +1036,11 @@ function loadSettings() {
         updateState({
             serverCount,
             gpuType,
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture,
             currentStatsTab,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
             settings: {
@@ -983,6 +1070,11 @@ function resetSettings() {
     updateState({
         serverCount: defaults.serverCount,
         gpuType: defaults.gpuType,
+        serverStorageNic: defaults.serverStorageNic,
+        storageServerCount: defaults.storageServerCount,
+        storageNic: defaults.storageNic,
+        storageNicCount: defaults.storageNicCount,
+        architecture: defaults.architecture,
         currentStatsTab: defaults.currentStatsTab,
         viewBox: { ...defaults.viewBox },
         cachedHardwareData: null,
@@ -993,8 +1085,19 @@ function resetSettings() {
     // 同步 UI
     const serverInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
+
     if (serverInput) serverInput.value = String(defaults.serverCount);
     if (gpuSelect) gpuSelect.value = defaults.gpuType;
+    if (serverStorageNicSelect) serverStorageNicSelect.value = defaults.serverStorageNic;
+    if (storageServerCountInput) storageServerCountInput.value = String(defaults.storageServerCount);
+    if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
+    if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
+    if (architectureSelect) architectureSelect.value = defaults.architecture;
 
     // 重置面板状态
     const sidebar = document.getElementById('sidebar');
@@ -1042,7 +1145,7 @@ function debouncedSave() {
 /** @typedef {{ conn: string, model: string, count: number, desc: string }} ModuleItem */
 /** @typedef {{ conn: string, model: string, count: number, desc: string }} CableItem */
 /** @typedef {{ networkType: string, podCount: number, serversPerPod: number, leafSwitches: number, spineSwitches: number, coreSwitches: number, [key:string]: any }} ComputeMeta */
-/** @typedef {{ storageNodes: number, totalStorageDownlink: number, storageLeaf: number, storageSpine: number }} StorageMeta */
+/** @typedef {{ storageNodes: number, totalStorageDownlink: number, storageLeaf: number, storageSpine: number, serverStoragePorts: number, storagePorts: number }} StorageMeta */
 /** @typedef {{ switches: SwitchItem[], modules: ModuleItem[], cables: CableItem[], meta: ComputeMeta }} ComputeSection */
 /** @typedef {{ switches: SwitchItem[], modules: ModuleItem[], cables: CableItem[], meta: StorageMeta }} StorageSection */
 /** @typedef {{ compute: ComputeSection, storage: StorageSection|null }} HardwareResult */
@@ -1064,20 +1167,57 @@ function nextPowerOf2(n) {
  * 生成缓存键
  * @param {number} serverCount
  * @param {string} gpuType
+ * @param {Object} options
  * @returns {string}
  */
-function _cacheKey(serverCount, gpuType) {
-    return `${gpuType}::${serverCount}`;
+function _cacheKey(serverCount, gpuType, options = {}) {
+    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}`;
+}
+
+/**
+ * 获取算力服务器存储网端口数
+ * @param {string} serverStorageNic
+ * @returns {number}
+ */
+function getServerStoragePorts(serverStorageNic) {
+    const spec = STORAGE_NIC_SPECS[serverStorageNic];
+    return spec ? spec.portCount : 1;
+}
+
+/**
+ * 获取存储服务器端口数（单网卡端口数 * 网卡数量）
+ * @param {string} storageNic
+ * @param {number} storageNicCount
+ * @returns {number}
+ */
+function getStoragePorts(storageNic, storageNicCount) {
+    const spec = STORAGE_NIC_SPECS[storageNic];
+    const portPerNic = spec ? spec.portCount : 1;
+    return portPerNic * storageNicCount;
 }
 
 /**
  * 计算 B300 网络设备硬件清单
  * @param {number} serverCount
  * @param {string} gpuType - GPU 规格键，如 'B300_8'
+ * @param {Object} options - 可选参数
+ * @param {string} [options.serverStorageNic='CX7_400G'] - 算力服务器存储网卡配置
+ * @param {number} [options.storageServerCount=12] - 存储服务器数量
+ * @param {string} [options.storageNic='CX7_400G'] - 存储网卡配置
+ * @param {number} [options.storageNicCount=2] - 存储网卡数量
+ * @param {string} [options.architecture='virtual-dual-plane'] - 组网架构
  * @returns {HardwareResult}
  */
-function calcHardware(serverCount, gpuType = 'B300_8') {
-    const key = _cacheKey(serverCount, gpuType);
+function calcHardware(serverCount, gpuType = 'B300_8', options = {}) {
+    const {
+        serverStorageNic = 'CX7_400G',
+        storageServerCount = 12,
+        storageNic = 'CX7_400G',
+        storageNicCount = 2,
+        architecture = 'virtual-dual-plane'
+    } = options;
+
+    const key = _cacheKey(serverCount, gpuType, options);
     if (_cache.has(key)) {
         return _cache.get(key);
     }
@@ -1174,10 +1314,19 @@ function calcHardware(serverCount, gpuType = 'B300_8') {
         }
     };
 
-    // ===== 存储网 (serverCount >= 32) =====
-    if (serverCount >= 32) {
-        const storageNodes = Math.ceil(serverCount * STORAGE_RATIO.nodes / STORAGE_RATIO.base);
-        const totalStorageDownlink = serverCount * STORAGE_RATIO.serverPorts + storageNodes * STORAGE_RATIO.storageNodePorts;
+    // ===== 存储网 =====
+    // 使用菜单配置的存储服务器数量，不再硬编码配比
+    const actualStorageNodes = storageServerCount;
+    if (actualStorageNodes > 0 && serverCount >= 32) {
+        // 算力服务器存储网端口总数
+        const serverStoragePorts = getServerStoragePorts(serverStorageNic);
+        const totalServerStorageDownlink = serverCount * serverStoragePorts;
+
+        // 存储服务器存储网端口总数
+        const storagePorts = getStoragePorts(storageNic, storageNicCount);
+        const totalStorageNodeDownlink = actualStorageNodes * storagePorts;
+
+        const totalStorageDownlink = totalServerStorageDownlink + totalStorageNodeDownlink;
 
         let storageLeaf = Math.ceil(totalStorageDownlink / leafDownlinkPorts);
         if (storageLeaf % 2 !== 0) storageLeaf += 1;
@@ -1213,10 +1362,12 @@ function calcHardware(serverCount, gpuType = 'B300_8') {
             modules: storageModules,
             cables: storageCables,
             meta: {
-                storageNodes,
+                storageNodes: actualStorageNodes,
                 totalStorageDownlink,
                 storageLeaf,
-                storageSpine
+                storageSpine,
+                serverStoragePorts,
+                storagePorts
             }
         };
     }
@@ -1248,13 +1399,13 @@ function getCacheStats() {
  * 输出纯数据结构，供 svg-renderer.js 消费
  */
 
-/** @typedef {{ type: 'rect'|'text', [key:string]: any }} BgElement */
-/** @typedef {{ type: 'virtualSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
+/** @typedef {{ type: 'rect'|'text'|'line', [key:string]: any }} BgElement */
+/** @typedef {{ type: 'virtualSpine'|'physicalSpine'|'singleSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
 /** @typedef {{ type: 'leafPair'|'gap', groupIdx?: number, count?: number, x: number, y: number, l1Id: string, l2Id: string, l1Label: string, l2Label: string, p1x: number, p2x: number, bottomY: number, podIndex: number, tooltipL1: string, tooltipL2: string }} LeafNode */
 /** @typedef {{ type: 'server'|'gap'|'ellipsis', idx?: string, x: number, y: number, width: number, height: number, id: string, label: string, tooltip: string, railCount: number }} ServerNode */
 /** @typedef {{ x1: number, y1: number, x2: number, y2: number, color: string, classes: string }} LinkSegment */
 /** @typedef {{ podIndex: number, bgRect: Object, podLabel: Object, podSubLabel: Object, leafNodes: LeafNode[], serverNodes: ServerNode[] }} PodLayout */
-/** @typedef {{ dimensions: {width:number,height:number}, bgElements: BgElement[], spineNodes: SpineNode[], pods: PodLayout[], links: LinkSegment[], visibleLeafGroupIds: Set<number> }} TopologyLayout */
+/** @typedef {{ dimensions: {width:number,height:number}, bgElements: BgElement[], spineNodes: SpineNode[], pods: PodLayout[], links: LinkSegment[], visibleLeafGroupIds: Set<number>, architecture: string }} TopologyLayout */
 
 /**
  * 构建压缩显示位置数组
@@ -1274,16 +1425,42 @@ function buildCompressedPositions(totalCount) {
 }
 
 /**
+ * 获取架构显示信息
+ * @param {string} architecture
+ * @returns {{ label: string, desc: string, planes: number, mode: string }}
+ */
+function getArchDisplayInfo(architecture) {
+    const archType = ARCHITECTURE_TYPES[architecture] || ARCHITECTURE_TYPES['virtual-dual-plane'];
+    switch (architecture) {
+        case 'single-plane':
+            return { ...archType, label: '单平面组网', desc: '单平面 [全蓝]' };
+        case 'physical-dual-plane':
+            return { ...archType, label: '物理双平面组网', desc: '物理双平面 [蓝/橙分离]' };
+        case 'virtual-dual-plane':
+        default:
+            return { ...archType, label: '虚拟双平面组网', desc: '物理单机·虚拟双平面 [VRF逃生]' };
+    }
+}
+
+/**
  * 计算拓扑布局
  * @param {number} serverCount
  * @param {string} gpuType
+ * @param {Object} options
+ * @param {string} [options.architecture='virtual-dual-plane']
  * @returns {TopologyLayout}
  */
-function calcLayout(serverCount, gpuType) {
+function calcLayout(serverCount, gpuType, options = {}) {
+    const { architecture = 'virtual-dual-plane' } = options;
+    const archInfo = getArchDisplayInfo(architecture);
+    const isSinglePlane = archInfo.mode === 'single';
+    const isVirtualDual = archInfo.mode === 'virtual';
+    const isPhysicalDual = archInfo.mode === 'physical';
+
     const parts = gpuType.split('_');
     const railCount = parseInt(parts[1]) || 8;
 
-    const hwData = calcHardware(serverCount, gpuType);
+    const hwData = calcHardware(serverCount, gpuType, options);
     const cm = hwData.compute.meta;
     const actualSpineCount = cm.spineSwitches;
     const podCount = cm.podCount;
@@ -1316,23 +1493,26 @@ function calcLayout(serverCount, gpuType) {
     bgElements.push({
         type: 'text',
         x: 230, y: spineY - 52,
-        text: `核心层 (Spine) — 物理单机·虚拟双平面 [${actualSpineCount}台]`,
+        text: `核心层 (Spine) — ${archInfo.desc} [${actualSpineCount}台]`,
         fontSize: 16, fill: '#94a3b8', fontWeight: 'bold',
         fontFamily: "'Inter','Microsoft YaHei',sans-serif"
     });
-    // VRF逃生图例
-    bgElements.push({
-        type: 'line',
-        x1: spineBoxWidth - 40, y1: spineY - 68,
-        x2: spineBoxWidth - 20, y2: spineY - 68,
-        stroke: '#fbbf24', strokeWidth: 1, strokeDasharray: '3,3'
-    });
-    bgElements.push({
-        type: 'text',
-        x: spineBoxWidth - 15, y: spineY - 64,
-        text: '= VRF虚拟逃生',
-        fontSize: 9, fill: '#fbbf24', fontWeight: 600
-    });
+
+    // VRF逃生图例（仅虚拟双平面显示）
+    if (isVirtualDual) {
+        bgElements.push({
+            type: 'line',
+            x1: spineBoxWidth - 40, y1: spineY - 68,
+            x2: spineBoxWidth - 20, y2: spineY - 68,
+            stroke: '#fbbf24', strokeWidth: 1, strokeDasharray: '3,3'
+        });
+        bgElements.push({
+            type: 'text',
+            x: spineBoxWidth - 15, y: spineY - 64,
+            text: '= VRF虚拟逃生',
+            fontSize: 9, fill: '#fbbf24', fontWeight: 600
+        });
+    }
 
     // ===== 2. Spine 节点位置计算 =====
     const spinePositions = buildCompressedPositions(actualSpineCount);
@@ -1356,20 +1536,55 @@ function calcLayout(serverCount, gpuType) {
         const spineW = LAYOUT.spineW;
         const spineH = LAYOUT.spineH;
 
-        spineNodes.push({
-            type: 'virtualSpine',
-            idx,
-            id: `spine_${idx}`,
-            x: cx - spineW / 2,
-            y: spineY - 25,
-            width: spineW,
-            height: spineH,
-            p1x: cx - 50,
-            p2x: cx + 50,
-            bottomY: spineY - 25 + spineH,
-            label: `Spine-${idx}`,
-            tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
-        });
+        if (isVirtualDual) {
+            // 虚拟双平面：一台物理机内VRF分区
+            spineNodes.push({
+                type: 'virtualSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2,
+                y: spineY - 25,
+                width: spineW,
+                height: spineH,
+                p1x: cx - 50,
+                p2x: cx + 50,
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
+            });
+        } else if (isPhysicalDual) {
+            // 物理双平面：独立P1/P2物理交换机
+            spineNodes.push({
+                type: 'physicalSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2 - 30,
+                y: spineY - 25,
+                width: spineW * 0.7,
+                height: spineH,
+                p1x: cx - 30,
+                p2x: cx + 30,
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理双平面交换机<br>平面1 (蓝色) / 平面2 (橙色)<br>独立物理设备<br>800G 端口`
+            });
+        } else {
+            // 单平面：仅蓝色
+            spineNodes.push({
+                type: 'singleSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2,
+                y: spineY - 25,
+                width: spineW,
+                height: spineH,
+                p1x: cx,
+                p2x: cx,  // 单平面只有一个连接点
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>单平面交换机<br>800G 端口`
+            });
+        }
     }
 
     // ===== 3. POD 层 =====
@@ -1451,19 +1666,31 @@ function calcLayout(serverCount, gpuType) {
 
             // 到 Spine 的连线
             spineNodes.forEach(sp => {
-                if (sp.type !== 'virtualSpine') return;
-                links.push({
-                    x1: cx - 45, y1: leafY,
-                    x2: sp.p1x, y2: sp.bottomY,
-                    color: '#3b82f6',
-                    classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
-                });
-                links.push({
-                    x1: cx + 45, y1: leafY,
-                    x2: sp.p2x, y2: sp.bottomY,
-                    color: '#f97316',
-                    classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
-                });
+                if (sp.type === 'gap') return;
+
+                if (isSinglePlane) {
+                    // 单平面：仅蓝色连线
+                    links.push({
+                        x1: cx - 45, y1: leafY,
+                        x2: sp.p1x, y2: sp.bottomY,
+                        color: '#3b82f6',
+                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                } else {
+                    // 双平面：蓝色+橙色连线
+                    links.push({
+                        x1: cx - 45, y1: leafY,
+                        x2: sp.p1x, y2: sp.bottomY,
+                        color: '#3b82f6',
+                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                    links.push({
+                        x1: cx + 45, y1: leafY,
+                        x2: sp.p2x, y2: sp.bottomY,
+                        color: '#f97316',
+                        classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                }
             });
         }
 
@@ -1511,18 +1738,30 @@ function calcLayout(serverCount, gpuType) {
 
                 if (isTargetVisible && targetLeaf) {
                     const linkClasses = `${srvId} dev-${targetLeaf.l1Id} dev-${targetLeaf.l2Id}`;
-                    links.push({
-                        x1: portX - 7, y1: portY - 14,
-                        x2: targetLeaf.p1x, y2: targetLeaf.y,
-                        color: '#3b82f6',
-                        classes: linkClasses
-                    });
-                    links.push({
-                        x1: portX + 7, y1: portY - 14,
-                        x2: targetLeaf.p2x, y2: targetLeaf.y,
-                        color: '#f97316',
-                        classes: linkClasses
-                    });
+
+                    if (isSinglePlane) {
+                        // 单平面：仅蓝色连线
+                        links.push({
+                            x1: portX, y1: portY - 14,
+                            x2: targetLeaf.p1x, y2: targetLeaf.y,
+                            color: '#3b82f6',
+                            classes: linkClasses
+                        });
+                    } else {
+                        // 双平面：蓝色+橙色连线
+                        links.push({
+                            x1: portX - 7, y1: portY - 14,
+                            x2: targetLeaf.p1x, y2: targetLeaf.y,
+                            color: '#3b82f6',
+                            classes: linkClasses
+                        });
+                        links.push({
+                            x1: portX + 7, y1: portY - 14,
+                            x2: targetLeaf.p2x, y2: targetLeaf.y,
+                            color: '#f97316',
+                            classes: linkClasses
+                        });
+                    }
                 }
             }
         }
@@ -1536,7 +1775,8 @@ function calcLayout(serverCount, gpuType) {
         spineNodes,
         pods,
         links,
-        visibleLeafGroupIds
+        visibleLeafGroupIds,
+        architecture
     };
 }
 
@@ -1545,6 +1785,7 @@ function calcLayout(serverCount, gpuType) {
 /**
  * svg-renderer.js - SVG 分层渲染引擎
  * 使用 DocumentFragment 批量插入，维护 bg/link/node 三层
+ * 支持：虚拟双平面、物理双平面、单平面三种架构渲染
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -1692,7 +1933,7 @@ function renderSpineGap(node) {
 }
 
 /**
- * 创建虚拟双平面 Spine
+ * 创建虚拟双平面 Spine（VRF1/VRF2分区 + VRF逃生虚线）
  * @param {SpineNode} node
  * @returns {DocumentFragment}
  */
@@ -1811,19 +2052,141 @@ function renderVirtualSpine(node) {
 }
 
 /**
+ * 创建物理双平面 Spine（P1/P2独立物理交换机，无VRF分区）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderPhysicalSpine(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    const w = node.width;
+    const h = node.height;
+
+    // P1 (蓝色) - 上半部分
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: w, height: h / 2 - 2,
+        rx: 6, fill: 'url(#grad-blue)', stroke: '#3b82f6',
+        'stroke-width': 1.5, filter: 'url(#shadow)'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 4 - 2, `P1`, {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 4 + 10, node.label || '', {
+        'font-size': 6, fill: '#93c5fd', 'text-anchor': 'middle'
+    }));
+
+    // P2 (橙色) - 下半部分
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y + h / 2 + 2, width: w, height: h / 2 - 2,
+        rx: 6, fill: 'url(#grad-orange)', stroke: '#f97316',
+        'stroke-width': 1.5, filter: 'url(#shadow)'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h * 3 / 4 - 2, `P2`, {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h * 3 / 4 + 10, node.label || '', {
+        'font-size': 6, fill: '#fdba74', 'text-anchor': 'middle'
+    }));
+
+    // 分隔线
+    g.appendChild(createSVG('line', {
+        x1: node.x + 4, y1: node.y + h / 2,
+        x2: node.x + w - 4, y2: node.y + h / 2,
+        stroke: '#475569', 'stroke-width': 1, 'stroke-dasharray': '2,2'
+    }));
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
+ * 创建单平面 Spine（仅蓝色，无平面分区）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderSingleSpine(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    // 整体蓝色盒子
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: node.width, height: node.height,
+        rx: 8, fill: '#0f172a', stroke: '#3b82f6', 'stroke-width': 2.5,
+        filter: 'url(#shadow)'
+    }));
+    // 顶部高光
+    g.appendChild(createSVG('line', {
+        x1: node.x + 3, y1: node.y + 2,
+        x2: node.x + node.width - 3, y2: node.y + 2,
+        stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1
+    }));
+    // 内部蓝色填充
+    const pad = 6;
+    g.appendChild(createSVG('rect', {
+        x: node.x + pad, y: node.y + 14,
+        width: node.width - pad * 2, height: node.height - 24,
+        rx: 4, fill: 'url(#grad-blue)', stroke: '#3b82f6',
+        'stroke-width': 1, opacity: 0.95
+    }));
+    // 标签
+    g.appendChild(createText(node.x + 6, node.y + 12, node.label || 'SPINE', {
+        'font-size': 7, fill: '#94a3b8', 'font-weight': 700, 'letter-spacing': 0.5
+    }));
+    g.appendChild(createText(node.x + node.width / 2, node.y + node.height / 2 - 2, '单平面', {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+
+    // 端口指示灯
+    const portCount = 10;
+    const portSpacing = (node.width - 20) / portCount;
+    for (let i = 0; i < portCount; i++) {
+        const px = node.x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        g.appendChild(createSVG('rect', {
+            x: px, y: node.y + node.height - 8,
+            width: 4, height: 4, fill: '#60a5fa',
+            class: 'led-blink', rx: 0.5
+        }));
+    }
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
  * 创建 Leaf 交换机
  * @param {import('./layout-engine.js').LeafNode} node
  * @param {'blue'|'orange'} planeType
+ * @param {string} architecture
  * @returns {DocumentFragment}
  */
-function renderLeafSwitch(node, planeType) {
+function renderLeafSwitch(node, planeType, architecture = 'virtual-dual-plane') {
     const frag = document.createDocumentFragment();
+    const isSinglePlane = architecture === 'single-plane';
     const id = planeType === 'blue' ? node.l1Id : node.l2Id;
     const label = planeType === 'blue' ? node.l1Label : node.l2Label;
     const tooltip = planeType === 'blue' ? node.tooltipL1 : node.tooltipL2;
     const x = planeType === 'blue' ? node.x - 80 : node.x + 10;
     const width = 70;
     const height = 50;
+
+    // 单平面模式下跳过橙色Leaf渲染
+    if (isSinglePlane && planeType === 'orange') {
+        return frag;
+    }
+
+    // 单平面模式下调整蓝色Leaf位置居中
+    const leafX = isSinglePlane ? node.x - width / 2 : x;
 
     const g = createSVG('g', {
         id: `dev-${id}`,
@@ -1836,19 +2199,19 @@ function renderLeafSwitch(node, planeType) {
     const stroke = planeType === 'blue' ? '#3b82f6' : '#f97316';
 
     g.appendChild(createSVG('rect', {
-        x, y: node.y, width, height,
+        x: leafX, y: node.y, width, height,
         rx: 6, fill, stroke, 'stroke-width': 1.5,
         filter: 'url(#shadow)'
     }));
     g.appendChild(createSVG('line', {
-        x1: x + 2, y1: node.y + 2, x2: x + width - 2, y2: node.y + 2,
+        x1: leafX + 2, y1: node.y + 2, x2: leafX + width - 2, y2: node.y + 2,
         stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1
     }));
     g.appendChild(createSVG('line', {
-        x1: x + 4, y1: node.y + height / 2, x2: x + width - 4, y2: node.y + height / 2,
+        x1: leafX + 4, y1: node.y + height / 2, x2: leafX + width - 4, y2: node.y + height / 2,
         stroke: 'rgba(0,0,0,0.3)', 'stroke-width': 1
     }));
-    g.appendChild(createText(x + width / 2, node.y + height / 2 - 2, label, {
+    g.appendChild(createText(leafX + width / 2, node.y + height / 2 - 2, label, {
         'font-family': "'Inter','Microsoft YaHei',sans-serif",
         'font-size': 11, fill: '#ffffff', 'font-weight': 600,
         'text-anchor': 'middle', 'alignment-baseline': 'middle',
@@ -1860,7 +2223,7 @@ function renderLeafSwitch(node, planeType) {
     const portSpacing = (width - 20) / portCount;
     const portFill = planeType === 'blue' ? '#60a5fa' : '#fdba74';
     for (let i = 0; i < portCount; i++) {
-        const px = x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        const px = leafX + 10 + i * portSpacing + portSpacing / 2 - 2;
         g.appendChild(createSVG('rect', {
             x: px, y: node.y + height - 8,
             width: 4, height: 4, fill: portFill, class: 'led-blink'
@@ -1874,9 +2237,11 @@ function renderLeafSwitch(node, planeType) {
 /**
  * 创建服务器
  * @param {import('./layout-engine.js').ServerNode} node
+ * @param {string} architecture
  * @returns {DocumentFragment}
  */
-function renderServer(node) {
+function renderServer(node, architecture = 'virtual-dual-plane') {
+    const isSinglePlane = architecture === 'single-plane';
     const frag = document.createDocumentFragment();
     const g = createSVG('g', {
         id: `dev-${node.id}`,
@@ -1949,16 +2314,23 @@ function createLACPBadge(cx, cy) {
  * @param {import('./layout-engine.js').TopologyLayout} layout
  * @param {number} serverCount
  * @param {number} railCount
+ * @param {Object} options
  */
-function renderNodeLayer(layer, layout, serverCount, railCount) {
+function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
+    const architecture = layout.architecture || options.architecture || 'virtual-dual-plane';
+    const isSinglePlane = architecture === 'single-plane';
     const frag = document.createDocumentFragment();
 
     // Spine 节点
     for (const sp of layout.spineNodes) {
         if (sp.type === 'gap') {
             frag.appendChild(renderSpineGap(sp));
-        } else {
+        } else if (sp.type === 'virtualSpine') {
             frag.appendChild(renderVirtualSpine(sp));
+        } else if (sp.type === 'physicalSpine') {
+            frag.appendChild(renderPhysicalSpine(sp));
+        } else if (sp.type === 'singleSpine') {
+            frag.appendChild(renderSingleSpine(sp));
         }
     }
 
@@ -1976,8 +2348,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else {
-                frag.appendChild(renderLeafSwitch(leaf, 'blue'));
-                frag.appendChild(renderLeafSwitch(leaf, 'orange'));
+                frag.appendChild(renderLeafSwitch(leaf, 'blue', architecture));
+                frag.appendChild(renderLeafSwitch(leaf, 'orange', architecture));
             }
         }
 
@@ -1988,7 +2360,7 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     'font-size': 14, fill: '#475569', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else if (srv.type === 'server') {
-                frag.appendChild(renderServer(srv));
+                frag.appendChild(renderServer(srv, architecture));
 
                 // 网卡端口装饰
                 const portGroupSpacing = srv.width / (railCount + 1);
@@ -1999,20 +2371,32 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     const isTargetVisible = layout.visibleLeafGroupIds.has(targetLeafGroupIdx);
 
                     if (isTargetVisible) {
-                        frag.appendChild(createSVG('rect', {
-                            x: portX - 12, y: portY - 14, width: 10, height: 14,
-                            fill: '#1e3a8a', rx: 1
-                        }));
-                        frag.appendChild(createSVG('rect', {
-                            x: portX + 2, y: portY - 14, width: 10, height: 14,
-                            fill: '#c2410c', rx: 1
-                        }));
-                        frag.appendChild(createText(portX - 7, portY - 4, '1', {
-                            'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
-                        }));
-                        frag.appendChild(createText(portX + 7, portY - 4, '2', {
-                            'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
-                        }));
+                        if (isSinglePlane) {
+                            // 单平面：仅蓝色端口
+                            frag.appendChild(createSVG('rect', {
+                                x: portX - 6, y: portY - 14, width: 12, height: 14,
+                                fill: '#1e3a8a', rx: 1
+                            }));
+                            frag.appendChild(createText(portX, portY - 4, '1', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                        } else {
+                            // 双平面：蓝色+橙色端口
+                            frag.appendChild(createSVG('rect', {
+                                x: portX - 12, y: portY - 14, width: 10, height: 14,
+                                fill: '#1e3a8a', rx: 1
+                            }));
+                            frag.appendChild(createSVG('rect', {
+                                x: portX + 2, y: portY - 14, width: 10, height: 14,
+                                fill: '#c2410c', rx: 1
+                            }));
+                            frag.appendChild(createText(portX - 7, portY - 4, '1', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                            frag.appendChild(createText(portX + 7, portY - 4, '2', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                        }
 
                         if (rail === 0 || rail === railCount - 1) {
                             frag.appendChild(createLACPBadge(portX, portY - 40));
@@ -2041,8 +2425,9 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
  * @param {import('./layout-engine.js').TopologyLayout} layout
  * @param {number} serverCount
  * @param {number} railCount
+ * @param {Object} options
  */
-function renderTopology(layout, serverCount, railCount) {
+function renderTopology(layout, serverCount, railCount, options = {}) {
     const bgLayer = document.getElementById('bgLayer');
     const linkLayer = document.getElementById('linkLayer');
     const nodeLayer = document.getElementById('nodeLayer');
@@ -2054,7 +2439,7 @@ function renderTopology(layout, serverCount, railCount) {
 
     renderBgLayer(bgLayer, layout);
     renderLinkLayer(linkLayer, layout);
-    renderNodeLayer(nodeLayer, layout, serverCount, railCount);
+    renderNodeLayer(nodeLayer, layout, serverCount, railCount, options);
 }
 
 /**
@@ -2451,6 +2836,12 @@ function renderStatsSection(title, section) {
         if (section.meta.storageNodes !== undefined) {
             html += `<div class="flex justify-between"><span>存储节点:</span><span class="text-white">${section.meta.storageNodes} 台</span></div>`;
             html += `<div class="flex justify-between"><span>存储下行端口:</span><span class="text-white">${section.meta.totalStorageDownlink} 个</span></div>`;
+            if (section.meta.serverStoragePorts !== undefined) {
+                html += `<div class="flex justify-between"><span>算力存储端口/台:</span><span class="text-white">${section.meta.serverStoragePorts} 个</span></div>`;
+            }
+            if (section.meta.storagePorts !== undefined) {
+                html += `<div class="flex justify-between"><span>存储端口/台:</span><span class="text-white">${section.meta.storagePorts} 个</span></div>`;
+            }
         }
         html += `</div>`;
     }
@@ -2513,30 +2904,60 @@ function renderHardwareStats(data) {
  * @param {string} gpuType
  * @param {number} railCount
  * @param {Object} hwData
+ * @param {Object} options
  */
-function renderSummary(serverCount, gpuType, railCount, hwData) {
+function renderSummary(serverCount, gpuType, railCount, hwData, options = {}) {
     const panel = document.getElementById('summaryPanel');
     if (!panel) return;
 
     const cm = hwData.compute.meta;
     const gpuPrefix = getGpuPrefix();
+    const archType = ARCHITECTURE_TYPES[options.architecture] || ARCHITECTURE_TYPES['virtual-dual-plane'];
+    const serverStorageNicSpec = STORAGE_NIC_SPECS[options.serverStorageNic || 'CX7_400G'];
+    const storageNicSpec = STORAGE_NIC_SPECS[options.storageNic || 'CX7_400G'];
 
-    panel.innerHTML = `
+    let summaryHtml = `
         <div class="p-2.5 bg-slate-800 rounded border border-slate-700">
             <div class="flex justify-between mb-1"><span class="text-slate-400">总算力节点:</span> <span class="text-white font-semibold">${serverCount} 台</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">GPU 芯片:</span> <span class="text-cyan-400 font-semibold">${serverCount * 8} 颗</span></div>
-            <div class="flex justify-between mb-1"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色)</span></div>
-            <div class="flex justify-between"><span class="text-slate-400">Rail (轨道):</span> <span class="text-white">${railCount} 轨独立</span></div>
-        </div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">组网架构:</span> <span class="text-emerald-400 font-semibold">${archType.label}</span></div>`;
+
+    if (options.architecture === 'virtual-dual-plane') {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色, VRF虚拟)</span></div>`;
+    } else if (options.architecture === 'physical-dual-plane') {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色, 物理独立)</span></div>`;
+    } else {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">1 (蓝色, 单平面)</span></div>`;
+    }
+    summaryHtml += `</div>`;
+
+    // 计算网信息
+    summaryHtml += `
         <div class="p-2.5 bg-slate-800 rounded border border-slate-700 mt-1.5">
             <div class="flex justify-between mb-1"><span class="text-slate-400">网络架构:</span> <span class="text-emerald-400 font-semibold">${cm.networkType}</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">划分 POD 数:</span> <span class="text-white">${cm.podCount} 个 (${cm.serversPerPod}台/POD)</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">Leaf 交换机:</span> <span class="text-white">${cm.leafSwitches} 台</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">Spine 交换机:</span> <span class="text-white">${cm.spineSwitches} 台</span></div>
             ${cm.coreSwitches > 0 ? `<div class="flex justify-between mb-1"><span class="text-slate-400">Core 交换机:</span> <span class="text-white">${cm.coreSwitches} 台</span></div>` : ''}
-            <div class="flex justify-between"><span class="text-slate-400">核心架构:</span> <span class="text-emerald-400">去堆叠 Bond</span></div>
-        </div>
-    `;
+            <div class="flex justify-between"><span class="text-slate-400">核心架构:</span> <span class="text-emerald-400">${options.architecture === 'virtual-dual-plane' ? '去堆叠 Bond' : options.architecture === 'physical-dual-plane' ? '物理双平面' : '单平面'}</span></div>
+        </div>`;
+
+    // 存储网信息
+    const storageCount = options.storageServerCount || 0;
+    if (storageCount > 0 && hwData.storage) {
+        const sm = hwData.storage.meta;
+        summaryHtml += `
+        <div class="p-2.5 bg-slate-800 rounded border border-slate-700 mt-1.5">
+            <div class="font-tiny text-emerald-400 font-semibold mb-1">存储网</div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储服务器:</span> <span class="text-white">${storageCount} 台</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">算力存储网卡:</span> <span class="text-white">${serverStorageNicSpec?.label || 'CX7 400G'}</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储网卡:</span> <span class="text-white">${storageNicSpec?.label || 'CX7 400G'} ×${options.storageNicCount || 2}</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储Leaf:</span> <span class="text-white">${sm.storageLeaf} 台</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">存储Spine:</span> <span class="text-white">${sm.storageSpine} 台</span></div>
+        </div>`;
+    }
+
+    panel.innerHTML = summaryHtml;
 
     // B300 才显示浮动统计面板
     const statsContainer = document.getElementById('hardwareStatsContainer');
@@ -2736,6 +3157,15 @@ function normalizeServerCount(value) {
 }
 
 /**
+ * 根据算力服务器数量推荐存储服务器数量
+ * @param {number} serverCount
+ * @returns {number}
+ */
+function recommendStorageCount(serverCount) {
+    return Math.max(1, Math.ceil(serverCount * STORAGE_RATIO.nodes / STORAGE_RATIO.base));
+}
+
+/**
  * 主生成函数
  */
 async function generateTopology() {
@@ -2745,6 +3175,11 @@ async function generateTopology() {
     try {
         const serverCountInput = document.getElementById('serverCount');
         const gpuSelect = document.getElementById('gpuType');
+        const serverStorageNicSelect = document.getElementById('serverStorageNic');
+        const storageServerCountInput = document.getElementById('storageServerCount');
+        const storageNicSelect = document.getElementById('storageNic');
+        const storageNicCountSelect = document.getElementById('storageNicCount');
+        const architectureSelect = document.getElementById('architecture');
 
         if (!serverCountInput || !gpuSelect) {
             console.error('Required DOM elements not found');
@@ -2757,31 +3192,52 @@ async function generateTopology() {
         const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_8;
         const railCount = gpuSpec.railCount;
 
+        // 读取新增菜单项
+        const serverStorageNic = serverStorageNicSelect?.value || 'CX7_400G';
+        const storageServerCount = Math.max(0, parseInt(storageServerCountInput?.value) || 0);
+        const storageNic = storageNicSelect?.value || 'CX7_400G';
+        const storageNicCount = parseInt(storageNicCountSelect?.value) || 2;
+        const architecture = architectureSelect?.value || 'virtual-dual-plane';
+
         // 同步输入框（如果输入了非法值）
         if (String(serverCount) !== String(rawCount)) {
             serverCountInput.value = String(serverCount);
         }
+
+        // 构建选项对象
+        const options = {
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture
+        };
 
         // 更新状态
         updateState({
             serverCount,
             gpuType,
             railCount,
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture,
             cachedHardwareData: null
         });
 
         // 计算硬件
-        const hwData = calcHardware(serverCount, gpuType);
+        const hwData = calcHardware(serverCount, gpuType, options);
         updateState({ cachedHardwareData: hwData, cachedServerCount: serverCount });
 
         // 计算布局
-        const layout = calcLayout(serverCount, gpuType);
+        const layout = calcLayout(serverCount, gpuType, options);
 
         // 渲染
-        renderTopology(layout, serverCount, railCount);
+        renderTopology(layout, serverCount, railCount, options);
 
         // 更新统计面板
-        renderSummary(serverCount, gpuType, railCount, hwData);
+        renderSummary(serverCount, gpuType, railCount, hwData, options);
 
         // 重置高亮
         resetHighlights();
@@ -2821,18 +3277,61 @@ function bindToolbarEvents() {
 }
 
 /**
- * 绑定输入框事件（回车触发生成）
+ * 算力服务器数量变化时，联动推荐存储服务器数量
+ */
+function onServerCountChange() {
+    const serverCountInput = document.getElementById('serverCount');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    if (serverCountInput && storageServerCountInput) {
+        const serverCount = parseInt(serverCountInput.value) || 128;
+        const recommended = recommendStorageCount(serverCount);
+        storageServerCountInput.value = String(recommended);
+    }
+    generateTopology();
+}
+
+/**
+ * 绑定输入框事件
  */
 function bindInputEvents() {
     const serverCountSelect = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
 
     if (serverCountSelect) {
-        serverCountSelect.addEventListener('change', generateTopology);
+        serverCountSelect.addEventListener('change', onServerCountChange);
     }
 
     if (gpuSelect) {
         gpuSelect.addEventListener('change', generateTopology);
+    }
+
+    if (serverStorageNicSelect) {
+        serverStorageNicSelect.addEventListener('change', generateTopology);
+    }
+
+    if (storageServerCountInput) {
+        storageServerCountInput.addEventListener('change', generateTopology);
+        storageServerCountInput.addEventListener('input', generateTopology);
+    }
+
+    if (storageNicSelect) {
+        storageNicSelect.addEventListener('change', generateTopology);
+    }
+
+    if (storageNicCountSelect) {
+        storageNicCountSelect.addEventListener('change', generateTopology);
+    }
+
+    if (architectureSelect) {
+        architectureSelect.addEventListener('change', () => {
+            clearHardwareCache();
+            generateTopology();
+        });
     }
 }
 
@@ -2842,11 +3341,21 @@ function bindInputEvents() {
 function syncUIFromState() {
     const serverCountInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
     const sidebar = document.getElementById('sidebar');
     const hwPanel = document.getElementById('hwFloatPanel');
 
     if (serverCountInput) serverCountInput.value = String(appState.serverCount);
     if (gpuSelect) gpuSelect.value = appState.gpuType;
+    if (serverStorageNicSelect) serverStorageNicSelect.value = appState.serverStorageNic;
+    if (storageServerCountInput) storageServerCountInput.value = String(appState.storageServerCount);
+    if (storageNicSelect) storageNicSelect.value = appState.storageNic;
+    if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
+    if (architectureSelect) architectureSelect.value = appState.architecture;
 
     // 恢复面板折叠状态
     const icon = document.getElementById('toggleIcon');

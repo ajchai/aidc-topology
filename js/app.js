@@ -3,7 +3,7 @@
  * 整合所有模块，完成初始化与事件绑定
  */
 
-import { GPU_SPECS, LAYOUT } from './config.js';
+import { GPU_SPECS, STORAGE_RATIO, LAYOUT, ARCHITECTURE_TYPES } from './config.js';
 import { appState, updateState, getGpuPrefix } from './state.js';
 import { loadSettings, debouncedSave, bindResetButton } from './storage.js';
 import { calcHardware, clearHardwareCache } from './hardware-engine.js';
@@ -30,6 +30,15 @@ function normalizeServerCount(value) {
 }
 
 /**
+ * 根据算力服务器数量推荐存储服务器数量
+ * @param {number} serverCount
+ * @returns {number}
+ */
+function recommendStorageCount(serverCount) {
+    return Math.max(1, Math.ceil(serverCount * STORAGE_RATIO.nodes / STORAGE_RATIO.base));
+}
+
+/**
  * 主生成函数
  */
 export async function generateTopology() {
@@ -39,6 +48,11 @@ export async function generateTopology() {
     try {
         const serverCountInput = document.getElementById('serverCount');
         const gpuSelect = document.getElementById('gpuType');
+        const serverStorageNicSelect = document.getElementById('serverStorageNic');
+        const storageServerCountInput = document.getElementById('storageServerCount');
+        const storageNicSelect = document.getElementById('storageNic');
+        const storageNicCountSelect = document.getElementById('storageNicCount');
+        const architectureSelect = document.getElementById('architecture');
 
         if (!serverCountInput || !gpuSelect) {
             console.error('Required DOM elements not found');
@@ -51,31 +65,52 @@ export async function generateTopology() {
         const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_8;
         const railCount = gpuSpec.railCount;
 
+        // 读取新增菜单项
+        const serverStorageNic = serverStorageNicSelect?.value || 'CX7_400G';
+        const storageServerCount = Math.max(0, parseInt(storageServerCountInput?.value) || 0);
+        const storageNic = storageNicSelect?.value || 'CX7_400G';
+        const storageNicCount = parseInt(storageNicCountSelect?.value) || 2;
+        const architecture = architectureSelect?.value || 'virtual-dual-plane';
+
         // 同步输入框（如果输入了非法值）
         if (String(serverCount) !== String(rawCount)) {
             serverCountInput.value = String(serverCount);
         }
+
+        // 构建选项对象
+        const options = {
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture
+        };
 
         // 更新状态
         updateState({
             serverCount,
             gpuType,
             railCount,
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture,
             cachedHardwareData: null
         });
 
         // 计算硬件
-        const hwData = calcHardware(serverCount, gpuType);
+        const hwData = calcHardware(serverCount, gpuType, options);
         updateState({ cachedHardwareData: hwData, cachedServerCount: serverCount });
 
         // 计算布局
-        const layout = calcLayout(serverCount, gpuType);
+        const layout = calcLayout(serverCount, gpuType, options);
 
         // 渲染
-        renderTopology(layout, serverCount, railCount);
+        renderTopology(layout, serverCount, railCount, options);
 
         // 更新统计面板
-        renderSummary(serverCount, gpuType, railCount, hwData);
+        renderSummary(serverCount, gpuType, railCount, hwData, options);
 
         // 重置高亮
         resetHighlights();
@@ -115,18 +150,61 @@ function bindToolbarEvents() {
 }
 
 /**
- * 绑定输入框事件（回车触发生成）
+ * 算力服务器数量变化时，联动推荐存储服务器数量
+ */
+function onServerCountChange() {
+    const serverCountInput = document.getElementById('serverCount');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    if (serverCountInput && storageServerCountInput) {
+        const serverCount = parseInt(serverCountInput.value) || 128;
+        const recommended = recommendStorageCount(serverCount);
+        storageServerCountInput.value = String(recommended);
+    }
+    generateTopology();
+}
+
+/**
+ * 绑定输入框事件
  */
 function bindInputEvents() {
     const serverCountSelect = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
 
     if (serverCountSelect) {
-        serverCountSelect.addEventListener('change', generateTopology);
+        serverCountSelect.addEventListener('change', onServerCountChange);
     }
 
     if (gpuSelect) {
         gpuSelect.addEventListener('change', generateTopology);
+    }
+
+    if (serverStorageNicSelect) {
+        serverStorageNicSelect.addEventListener('change', generateTopology);
+    }
+
+    if (storageServerCountInput) {
+        storageServerCountInput.addEventListener('change', generateTopology);
+        storageServerCountInput.addEventListener('input', generateTopology);
+    }
+
+    if (storageNicSelect) {
+        storageNicSelect.addEventListener('change', generateTopology);
+    }
+
+    if (storageNicCountSelect) {
+        storageNicCountSelect.addEventListener('change', generateTopology);
+    }
+
+    if (architectureSelect) {
+        architectureSelect.addEventListener('change', () => {
+            clearHardwareCache();
+            generateTopology();
+        });
     }
 }
 
@@ -136,11 +214,21 @@ function bindInputEvents() {
 function syncUIFromState() {
     const serverCountInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
     const sidebar = document.getElementById('sidebar');
     const hwPanel = document.getElementById('hwFloatPanel');
 
     if (serverCountInput) serverCountInput.value = String(appState.serverCount);
     if (gpuSelect) gpuSelect.value = appState.gpuType;
+    if (serverStorageNicSelect) serverStorageNicSelect.value = appState.serverStorageNic;
+    if (storageServerCountInput) storageServerCountInput.value = String(appState.storageServerCount);
+    if (storageNicSelect) storageNicSelect.value = appState.storageNic;
+    if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
+    if (architectureSelect) architectureSelect.value = appState.architecture;
 
     // 恢复面板折叠状态
     const icon = document.getElementById('toggleIcon');

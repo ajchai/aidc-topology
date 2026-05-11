@@ -71,6 +71,20 @@ export const LAYOUT = Object.freeze({
     viewBoxDefault: { x: 0, y: 0, w: 2800, h: 1600 }
 });
 
+/** 存储网卡规格配置表 */
+export const STORAGE_NIC_SPECS = Object.freeze({
+    BF3_2x200G: { label: 'BF3 2 * 200G', speed: '200G', portCount: 2, totalBandwidth: '400G' },
+    CX7_2x200G: { label: 'CX7 2 * 200G', speed: '200G', portCount: 2, totalBandwidth: '400G' },
+    CX7_400G:   { label: 'CX7 400G',     speed: '400G', portCount: 1, totalBandwidth: '400G' }
+});
+
+/** 组网架构选项 */
+export const ARCHITECTURE_TYPES = Object.freeze({
+    'single-plane':         { label: '单平面组网',       planes: 1, mode: 'single' },
+    'physical-dual-plane':  { label: '物理双平面组网',   planes: 2, mode: 'physical' },
+    'virtual-dual-plane':   { label: '虚拟双平面组网',   planes: 2, mode: 'virtual' }
+});
+
 /** 架构常量 */
 export const ARCHITECTURE = Object.freeze({
     TWO_TIER_MAX: 512,

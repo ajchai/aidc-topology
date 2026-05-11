@@ -251,6 +251,105 @@ svg:active { cursor: grabbing; }
 }
 
 /* ==========================================
+   侧边栏配置分组
+   ========================================== */
+.config-group {
+    border-left: 3px solid;
+    padding-left: 12px;
+    margin-bottom: 16px;
+}
+
+.config-group.compute {
+    border-color: var(--accent-blue);
+}
+
+.config-group.storage {
+    border-color: var(--accent-emerald);
+}
+
+.config-group.network {
+    border-color: var(--accent-amber);
+}
+
+.config-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.config-group.compute .config-group-header {
+    color: var(--accent-blue);
+}
+
+.config-group.storage .config-group-header {
+    color: var(--accent-emerald);
+}
+
+.config-group.network .config-group-header {
+    color: var(--accent-amber);
+}
+
+.config-group-header svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.config-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.config-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.config-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+}
+
+.config-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.config-select,
+.config-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 6px 8px;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.config-select:focus,
+.config-input:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.config-group-result {
+    margin-top: 4px;
+}
+
+/* ==========================================
    字号体系
    ========================================== */
 .font-title   { font-size: 16px; font-weight: 700; }

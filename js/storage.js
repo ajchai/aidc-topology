@@ -8,6 +8,10 @@ import { LAYOUT } from './config.js';
 
 const STORAGE_KEY = 'aidc-topology-settings';
 
+const VALID_NIC_TYPES = ['BF3_2x200G', 'CX7_2x200G', 'CX7_400G'];
+const VALID_ARCHITECTURES = ['single-plane', 'physical-dual-plane', 'virtual-dual-plane'];
+const VALID_NIC_COUNTS = [1, 2, 4];
+
 /**
  * 获取默认配置
  * @returns {Object}
@@ -16,6 +20,11 @@ function getDefaults() {
     return {
         serverCount: 128,
         gpuType: 'B300_8',
+        serverStorageNic: 'CX7_400G',
+        storageServerCount: 12,
+        storageNic: 'CX7_400G',
+        storageNicCount: 2,
+        architecture: 'virtual-dual-plane',
         currentStatsTab: 'compute',
         viewBox: { ...LAYOUT.viewBoxDefault },
         settings: {
@@ -33,6 +42,11 @@ export function saveSettings() {
         const payload = {
             serverCount: appState.serverCount,
             gpuType: appState.gpuType,
+            serverStorageNic: appState.serverStorageNic,
+            storageServerCount: appState.storageServerCount,
+            storageNic: appState.storageNic,
+            storageNicCount: appState.storageNicCount,
+            architecture: appState.architecture,
             currentStatsTab: appState.currentStatsTab,
             viewBox: { ...appState.viewBox },
             settings: { ...appState.settings }
@@ -60,6 +74,19 @@ export function loadSettings() {
         const gpuType = ['A800_4', 'H800_8', 'B300_8'].includes(parsed.gpuType)
             ? parsed.gpuType
             : defaults.gpuType;
+        const serverStorageNic = VALID_NIC_TYPES.includes(parsed.serverStorageNic)
+            ? parsed.serverStorageNic
+            : defaults.serverStorageNic;
+        const storageServerCount = Math.min(1024, Math.max(0, Number(parsed.storageServerCount) ?? defaults.storageServerCount));
+        const storageNic = VALID_NIC_TYPES.includes(parsed.storageNic)
+            ? parsed.storageNic
+            : defaults.storageNic;
+        const storageNicCount = VALID_NIC_COUNTS.includes(Number(parsed.storageNicCount))
+            ? Number(parsed.storageNicCount)
+            : defaults.storageNicCount;
+        const architecture = VALID_ARCHITECTURES.includes(parsed.architecture)
+            ? parsed.architecture
+            : defaults.architecture;
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
@@ -67,6 +94,11 @@ export function loadSettings() {
         updateState({
             serverCount,
             gpuType,
+            serverStorageNic,
+            storageServerCount,
+            storageNic,
+            storageNicCount,
+            architecture,
             currentStatsTab,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
             settings: {
@@ -96,6 +128,11 @@ export function resetSettings() {
     updateState({
         serverCount: defaults.serverCount,
         gpuType: defaults.gpuType,
+        serverStorageNic: defaults.serverStorageNic,
+        storageServerCount: defaults.storageServerCount,
+        storageNic: defaults.storageNic,
+        storageNicCount: defaults.storageNicCount,
+        architecture: defaults.architecture,
         currentStatsTab: defaults.currentStatsTab,
         viewBox: { ...defaults.viewBox },
         cachedHardwareData: null,
@@ -106,8 +143,19 @@ export function resetSettings() {
     // 同步 UI
     const serverInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const serverStorageNicSelect = document.getElementById('serverStorageNic');
+    const storageServerCountInput = document.getElementById('storageServerCount');
+    const storageNicSelect = document.getElementById('storageNic');
+    const storageNicCountSelect = document.getElementById('storageNicCount');
+    const architectureSelect = document.getElementById('architecture');
+
     if (serverInput) serverInput.value = String(defaults.serverCount);
     if (gpuSelect) gpuSelect.value = defaults.gpuType;
+    if (serverStorageNicSelect) serverStorageNicSelect.value = defaults.serverStorageNic;
+    if (storageServerCountInput) storageServerCountInput.value = String(defaults.storageServerCount);
+    if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
+    if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
+    if (architectureSelect) architectureSelect.value = defaults.architecture;
 
     // 重置面板状态
     const sidebar = document.getElementById('sidebar');

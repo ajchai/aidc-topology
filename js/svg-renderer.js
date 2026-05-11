@@ -1,6 +1,7 @@
 /**
  * svg-renderer.js - SVG 分层渲染引擎
  * 使用 DocumentFragment 批量插入，维护 bg/link/node 三层
+ * 支持：虚拟双平面、物理双平面、单平面三种架构渲染
  */
 
 import { LAYOUT } from './config.js';
@@ -150,7 +151,7 @@ function renderSpineGap(node) {
 }
 
 /**
- * 创建虚拟双平面 Spine
+ * 创建虚拟双平面 Spine（VRF1/VRF2分区 + VRF逃生虚线）
  * @param {SpineNode} node
  * @returns {DocumentFragment}
  */
@@ -269,19 +270,141 @@ function renderVirtualSpine(node) {
 }
 
 /**
+ * 创建物理双平面 Spine（P1/P2独立物理交换机，无VRF分区）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderPhysicalSpine(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    const w = node.width;
+    const h = node.height;
+
+    // P1 (蓝色) - 上半部分
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: w, height: h / 2 - 2,
+        rx: 6, fill: 'url(#grad-blue)', stroke: '#3b82f6',
+        'stroke-width': 1.5, filter: 'url(#shadow)'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 4 - 2, `P1`, {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 4 + 10, node.label || '', {
+        'font-size': 6, fill: '#93c5fd', 'text-anchor': 'middle'
+    }));
+
+    // P2 (橙色) - 下半部分
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y + h / 2 + 2, width: w, height: h / 2 - 2,
+        rx: 6, fill: 'url(#grad-orange)', stroke: '#f97316',
+        'stroke-width': 1.5, filter: 'url(#shadow)'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h * 3 / 4 - 2, `P2`, {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h * 3 / 4 + 10, node.label || '', {
+        'font-size': 6, fill: '#fdba74', 'text-anchor': 'middle'
+    }));
+
+    // 分隔线
+    g.appendChild(createSVG('line', {
+        x1: node.x + 4, y1: node.y + h / 2,
+        x2: node.x + w - 4, y2: node.y + h / 2,
+        stroke: '#475569', 'stroke-width': 1, 'stroke-dasharray': '2,2'
+    }));
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
+ * 创建单平面 Spine（仅蓝色，无平面分区）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderSingleSpine(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    // 整体蓝色盒子
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: node.width, height: node.height,
+        rx: 8, fill: '#0f172a', stroke: '#3b82f6', 'stroke-width': 2.5,
+        filter: 'url(#shadow)'
+    }));
+    // 顶部高光
+    g.appendChild(createSVG('line', {
+        x1: node.x + 3, y1: node.y + 2,
+        x2: node.x + node.width - 3, y2: node.y + 2,
+        stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1
+    }));
+    // 内部蓝色填充
+    const pad = 6;
+    g.appendChild(createSVG('rect', {
+        x: node.x + pad, y: node.y + 14,
+        width: node.width - pad * 2, height: node.height - 24,
+        rx: 4, fill: 'url(#grad-blue)', stroke: '#3b82f6',
+        'stroke-width': 1, opacity: 0.95
+    }));
+    // 标签
+    g.appendChild(createText(node.x + 6, node.y + 12, node.label || 'SPINE', {
+        'font-size': 7, fill: '#94a3b8', 'font-weight': 700, 'letter-spacing': 0.5
+    }));
+    g.appendChild(createText(node.x + node.width / 2, node.y + node.height / 2 - 2, '单平面', {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+
+    // 端口指示灯
+    const portCount = 10;
+    const portSpacing = (node.width - 20) / portCount;
+    for (let i = 0; i < portCount; i++) {
+        const px = node.x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        g.appendChild(createSVG('rect', {
+            x: px, y: node.y + node.height - 8,
+            width: 4, height: 4, fill: '#60a5fa',
+            class: 'led-blink', rx: 0.5
+        }));
+    }
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
  * 创建 Leaf 交换机
  * @param {import('./layout-engine.js').LeafNode} node
  * @param {'blue'|'orange'} planeType
+ * @param {string} architecture
  * @returns {DocumentFragment}
  */
-function renderLeafSwitch(node, planeType) {
+function renderLeafSwitch(node, planeType, architecture = 'virtual-dual-plane') {
     const frag = document.createDocumentFragment();
+    const isSinglePlane = architecture === 'single-plane';
     const id = planeType === 'blue' ? node.l1Id : node.l2Id;
     const label = planeType === 'blue' ? node.l1Label : node.l2Label;
     const tooltip = planeType === 'blue' ? node.tooltipL1 : node.tooltipL2;
     const x = planeType === 'blue' ? node.x - 80 : node.x + 10;
     const width = 70;
     const height = 50;
+
+    // 单平面模式下跳过橙色Leaf渲染
+    if (isSinglePlane && planeType === 'orange') {
+        return frag;
+    }
+
+    // 单平面模式下调整蓝色Leaf位置居中
+    const leafX = isSinglePlane ? node.x - width / 2 : x;
 
     const g = createSVG('g', {
         id: `dev-${id}`,
@@ -294,19 +417,19 @@ function renderLeafSwitch(node, planeType) {
     const stroke = planeType === 'blue' ? '#3b82f6' : '#f97316';
 
     g.appendChild(createSVG('rect', {
-        x, y: node.y, width, height,
+        x: leafX, y: node.y, width, height,
         rx: 6, fill, stroke, 'stroke-width': 1.5,
         filter: 'url(#shadow)'
     }));
     g.appendChild(createSVG('line', {
-        x1: x + 2, y1: node.y + 2, x2: x + width - 2, y2: node.y + 2,
+        x1: leafX + 2, y1: node.y + 2, x2: leafX + width - 2, y2: node.y + 2,
         stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1
     }));
     g.appendChild(createSVG('line', {
-        x1: x + 4, y1: node.y + height / 2, x2: x + width - 4, y2: node.y + height / 2,
+        x1: leafX + 4, y1: node.y + height / 2, x2: leafX + width - 4, y2: node.y + height / 2,
         stroke: 'rgba(0,0,0,0.3)', 'stroke-width': 1
     }));
-    g.appendChild(createText(x + width / 2, node.y + height / 2 - 2, label, {
+    g.appendChild(createText(leafX + width / 2, node.y + height / 2 - 2, label, {
         'font-family': "'Inter','Microsoft YaHei',sans-serif",
         'font-size': 11, fill: '#ffffff', 'font-weight': 600,
         'text-anchor': 'middle', 'alignment-baseline': 'middle',
@@ -318,7 +441,7 @@ function renderLeafSwitch(node, planeType) {
     const portSpacing = (width - 20) / portCount;
     const portFill = planeType === 'blue' ? '#60a5fa' : '#fdba74';
     for (let i = 0; i < portCount; i++) {
-        const px = x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        const px = leafX + 10 + i * portSpacing + portSpacing / 2 - 2;
         g.appendChild(createSVG('rect', {
             x: px, y: node.y + height - 8,
             width: 4, height: 4, fill: portFill, class: 'led-blink'
@@ -332,9 +455,11 @@ function renderLeafSwitch(node, planeType) {
 /**
  * 创建服务器
  * @param {import('./layout-engine.js').ServerNode} node
+ * @param {string} architecture
  * @returns {DocumentFragment}
  */
-function renderServer(node) {
+function renderServer(node, architecture = 'virtual-dual-plane') {
+    const isSinglePlane = architecture === 'single-plane';
     const frag = document.createDocumentFragment();
     const g = createSVG('g', {
         id: `dev-${node.id}`,
@@ -407,16 +532,23 @@ function createLACPBadge(cx, cy) {
  * @param {import('./layout-engine.js').TopologyLayout} layout
  * @param {number} serverCount
  * @param {number} railCount
+ * @param {Object} options
  */
-function renderNodeLayer(layer, layout, serverCount, railCount) {
+function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
+    const architecture = layout.architecture || options.architecture || 'virtual-dual-plane';
+    const isSinglePlane = architecture === 'single-plane';
     const frag = document.createDocumentFragment();
 
     // Spine 节点
     for (const sp of layout.spineNodes) {
         if (sp.type === 'gap') {
             frag.appendChild(renderSpineGap(sp));
-        } else {
+        } else if (sp.type === 'virtualSpine') {
             frag.appendChild(renderVirtualSpine(sp));
+        } else if (sp.type === 'physicalSpine') {
+            frag.appendChild(renderPhysicalSpine(sp));
+        } else if (sp.type === 'singleSpine') {
+            frag.appendChild(renderSingleSpine(sp));
         }
     }
 
@@ -434,8 +566,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else {
-                frag.appendChild(renderLeafSwitch(leaf, 'blue'));
-                frag.appendChild(renderLeafSwitch(leaf, 'orange'));
+                frag.appendChild(renderLeafSwitch(leaf, 'blue', architecture));
+                frag.appendChild(renderLeafSwitch(leaf, 'orange', architecture));
             }
         }
 
@@ -446,7 +578,7 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     'font-size': 14, fill: '#475569', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else if (srv.type === 'server') {
-                frag.appendChild(renderServer(srv));
+                frag.appendChild(renderServer(srv, architecture));
 
                 // 网卡端口装饰
                 const portGroupSpacing = srv.width / (railCount + 1);
@@ -457,20 +589,32 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
                     const isTargetVisible = layout.visibleLeafGroupIds.has(targetLeafGroupIdx);
 
                     if (isTargetVisible) {
-                        frag.appendChild(createSVG('rect', {
-                            x: portX - 12, y: portY - 14, width: 10, height: 14,
-                            fill: '#1e3a8a', rx: 1
-                        }));
-                        frag.appendChild(createSVG('rect', {
-                            x: portX + 2, y: portY - 14, width: 10, height: 14,
-                            fill: '#c2410c', rx: 1
-                        }));
-                        frag.appendChild(createText(portX - 7, portY - 4, '1', {
-                            'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
-                        }));
-                        frag.appendChild(createText(portX + 7, portY - 4, '2', {
-                            'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
-                        }));
+                        if (isSinglePlane) {
+                            // 单平面：仅蓝色端口
+                            frag.appendChild(createSVG('rect', {
+                                x: portX - 6, y: portY - 14, width: 12, height: 14,
+                                fill: '#1e3a8a', rx: 1
+                            }));
+                            frag.appendChild(createText(portX, portY - 4, '1', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                        } else {
+                            // 双平面：蓝色+橙色端口
+                            frag.appendChild(createSVG('rect', {
+                                x: portX - 12, y: portY - 14, width: 10, height: 14,
+                                fill: '#1e3a8a', rx: 1
+                            }));
+                            frag.appendChild(createSVG('rect', {
+                                x: portX + 2, y: portY - 14, width: 10, height: 14,
+                                fill: '#c2410c', rx: 1
+                            }));
+                            frag.appendChild(createText(portX - 7, portY - 4, '1', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                            frag.appendChild(createText(portX + 7, portY - 4, '2', {
+                                'font-size': 8, fill: '#fff', 'text-anchor': 'middle'
+                            }));
+                        }
 
                         if (rail === 0 || rail === railCount - 1) {
                             frag.appendChild(createLACPBadge(portX, portY - 40));
@@ -499,8 +643,9 @@ function renderNodeLayer(layer, layout, serverCount, railCount) {
  * @param {import('./layout-engine.js').TopologyLayout} layout
  * @param {number} serverCount
  * @param {number} railCount
+ * @param {Object} options
  */
-export function renderTopology(layout, serverCount, railCount) {
+export function renderTopology(layout, serverCount, railCount, options = {}) {
     const bgLayer = document.getElementById('bgLayer');
     const linkLayer = document.getElementById('linkLayer');
     const nodeLayer = document.getElementById('nodeLayer');
@@ -512,7 +657,7 @@ export function renderTopology(layout, serverCount, railCount) {
 
     renderBgLayer(bgLayer, layout);
     renderLinkLayer(linkLayer, layout);
-    renderNodeLayer(nodeLayer, layout, serverCount, railCount);
+    renderNodeLayer(nodeLayer, layout, serverCount, railCount, options);
 }
 
 /**

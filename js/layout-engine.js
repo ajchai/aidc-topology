@@ -4,16 +4,16 @@
  * 输出纯数据结构，供 svg-renderer.js 消费
  */
 
-import { LAYOUT, ARCHITECTURE } from './config.js';
+import { LAYOUT, ARCHITECTURE, ARCHITECTURE_TYPES } from './config.js';
 import { calcHardware } from './hardware-engine.js';
 
-/** @typedef {{ type: 'rect'|'text', [key:string]: any }} BgElement */
-/** @typedef {{ type: 'virtualSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
+/** @typedef {{ type: 'rect'|'text'|'line', [key:string]: any }} BgElement */
+/** @typedef {{ type: 'virtualSpine'|'physicalSpine'|'singleSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
 /** @typedef {{ type: 'leafPair'|'gap', groupIdx?: number, count?: number, x: number, y: number, l1Id: string, l2Id: string, l1Label: string, l2Label: string, p1x: number, p2x: number, bottomY: number, podIndex: number, tooltipL1: string, tooltipL2: string }} LeafNode */
 /** @typedef {{ type: 'server'|'gap'|'ellipsis', idx?: string, x: number, y: number, width: number, height: number, id: string, label: string, tooltip: string, railCount: number }} ServerNode */
 /** @typedef {{ x1: number, y1: number, x2: number, y2: number, color: string, classes: string }} LinkSegment */
 /** @typedef {{ podIndex: number, bgRect: Object, podLabel: Object, podSubLabel: Object, leafNodes: LeafNode[], serverNodes: ServerNode[] }} PodLayout */
-/** @typedef {{ dimensions: {width:number,height:number}, bgElements: BgElement[], spineNodes: SpineNode[], pods: PodLayout[], links: LinkSegment[], visibleLeafGroupIds: Set<number> }} TopologyLayout */
+/** @typedef {{ dimensions: {width:number,height:number}, bgElements: BgElement[], spineNodes: SpineNode[], pods: PodLayout[], links: LinkSegment[], visibleLeafGroupIds: Set<number>, architecture: string }} TopologyLayout */
 
 /**
  * 构建压缩显示位置数组
@@ -33,16 +33,42 @@ function buildCompressedPositions(totalCount) {
 }
 
 /**
+ * 获取架构显示信息
+ * @param {string} architecture
+ * @returns {{ label: string, desc: string, planes: number, mode: string }}
+ */
+function getArchDisplayInfo(architecture) {
+    const archType = ARCHITECTURE_TYPES[architecture] || ARCHITECTURE_TYPES['virtual-dual-plane'];
+    switch (architecture) {
+        case 'single-plane':
+            return { ...archType, label: '单平面组网', desc: '单平面 [全蓝]' };
+        case 'physical-dual-plane':
+            return { ...archType, label: '物理双平面组网', desc: '物理双平面 [蓝/橙分离]' };
+        case 'virtual-dual-plane':
+        default:
+            return { ...archType, label: '虚拟双平面组网', desc: '物理单机·虚拟双平面 [VRF逃生]' };
+    }
+}
+
+/**
  * 计算拓扑布局
  * @param {number} serverCount
  * @param {string} gpuType
+ * @param {Object} options
+ * @param {string} [options.architecture='virtual-dual-plane']
  * @returns {TopologyLayout}
  */
-export function calcLayout(serverCount, gpuType) {
+export function calcLayout(serverCount, gpuType, options = {}) {
+    const { architecture = 'virtual-dual-plane' } = options;
+    const archInfo = getArchDisplayInfo(architecture);
+    const isSinglePlane = archInfo.mode === 'single';
+    const isVirtualDual = archInfo.mode === 'virtual';
+    const isPhysicalDual = archInfo.mode === 'physical';
+
     const parts = gpuType.split('_');
     const railCount = parseInt(parts[1]) || 8;
 
-    const hwData = calcHardware(serverCount, gpuType);
+    const hwData = calcHardware(serverCount, gpuType, options);
     const cm = hwData.compute.meta;
     const actualSpineCount = cm.spineSwitches;
     const podCount = cm.podCount;
@@ -75,23 +101,26 @@ export function calcLayout(serverCount, gpuType) {
     bgElements.push({
         type: 'text',
         x: 230, y: spineY - 52,
-        text: `核心层 (Spine) — 物理单机·虚拟双平面 [${actualSpineCount}台]`,
+        text: `核心层 (Spine) — ${archInfo.desc} [${actualSpineCount}台]`,
         fontSize: 16, fill: '#94a3b8', fontWeight: 'bold',
         fontFamily: "'Inter','Microsoft YaHei',sans-serif"
     });
-    // VRF逃生图例
-    bgElements.push({
-        type: 'line',
-        x1: spineBoxWidth - 40, y1: spineY - 68,
-        x2: spineBoxWidth - 20, y2: spineY - 68,
-        stroke: '#fbbf24', strokeWidth: 1, strokeDasharray: '3,3'
-    });
-    bgElements.push({
-        type: 'text',
-        x: spineBoxWidth - 15, y: spineY - 64,
-        text: '= VRF虚拟逃生',
-        fontSize: 9, fill: '#fbbf24', fontWeight: 600
-    });
+
+    // VRF逃生图例（仅虚拟双平面显示）
+    if (isVirtualDual) {
+        bgElements.push({
+            type: 'line',
+            x1: spineBoxWidth - 40, y1: spineY - 68,
+            x2: spineBoxWidth - 20, y2: spineY - 68,
+            stroke: '#fbbf24', strokeWidth: 1, strokeDasharray: '3,3'
+        });
+        bgElements.push({
+            type: 'text',
+            x: spineBoxWidth - 15, y: spineY - 64,
+            text: '= VRF虚拟逃生',
+            fontSize: 9, fill: '#fbbf24', fontWeight: 600
+        });
+    }
 
     // ===== 2. Spine 节点位置计算 =====
     const spinePositions = buildCompressedPositions(actualSpineCount);
@@ -115,20 +144,55 @@ export function calcLayout(serverCount, gpuType) {
         const spineW = LAYOUT.spineW;
         const spineH = LAYOUT.spineH;
 
-        spineNodes.push({
-            type: 'virtualSpine',
-            idx,
-            id: `spine_${idx}`,
-            x: cx - spineW / 2,
-            y: spineY - 25,
-            width: spineW,
-            height: spineH,
-            p1x: cx - 50,
-            p2x: cx + 50,
-            bottomY: spineY - 25 + spineH,
-            label: `Spine-${idx}`,
-            tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
-        });
+        if (isVirtualDual) {
+            // 虚拟双平面：一台物理机内VRF分区
+            spineNodes.push({
+                type: 'virtualSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2,
+                y: spineY - 25,
+                width: spineW,
+                height: spineH,
+                p1x: cx - 50,
+                p2x: cx + 50,
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
+            });
+        } else if (isPhysicalDual) {
+            // 物理双平面：独立P1/P2物理交换机
+            spineNodes.push({
+                type: 'physicalSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2 - 30,
+                y: spineY - 25,
+                width: spineW * 0.7,
+                height: spineH,
+                p1x: cx - 30,
+                p2x: cx + 30,
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理双平面交换机<br>平面1 (蓝色) / 平面2 (橙色)<br>独立物理设备<br>800G 端口`
+            });
+        } else {
+            // 单平面：仅蓝色
+            spineNodes.push({
+                type: 'singleSpine',
+                idx,
+                id: `spine_${idx}`,
+                x: cx - spineW / 2,
+                y: spineY - 25,
+                width: spineW,
+                height: spineH,
+                p1x: cx,
+                p2x: cx,  // 单平面只有一个连接点
+                bottomY: spineY - 25 + spineH,
+                label: `Spine-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>单平面交换机<br>800G 端口`
+            });
+        }
     }
 
     // ===== 3. POD 层 =====
@@ -210,19 +274,31 @@ export function calcLayout(serverCount, gpuType) {
 
             // 到 Spine 的连线
             spineNodes.forEach(sp => {
-                if (sp.type !== 'virtualSpine') return;
-                links.push({
-                    x1: cx - 45, y1: leafY,
-                    x2: sp.p1x, y2: sp.bottomY,
-                    color: '#3b82f6',
-                    classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
-                });
-                links.push({
-                    x1: cx + 45, y1: leafY,
-                    x2: sp.p2x, y2: sp.bottomY,
-                    color: '#f97316',
-                    classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
-                });
+                if (sp.type === 'gap') return;
+
+                if (isSinglePlane) {
+                    // 单平面：仅蓝色连线
+                    links.push({
+                        x1: cx - 45, y1: leafY,
+                        x2: sp.p1x, y2: sp.bottomY,
+                        color: '#3b82f6',
+                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                } else {
+                    // 双平面：蓝色+橙色连线
+                    links.push({
+                        x1: cx - 45, y1: leafY,
+                        x2: sp.p1x, y2: sp.bottomY,
+                        color: '#3b82f6',
+                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                    links.push({
+                        x1: cx + 45, y1: leafY,
+                        x2: sp.p2x, y2: sp.bottomY,
+                        color: '#f97316',
+                        classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
+                    });
+                }
             });
         }
 
@@ -270,18 +346,30 @@ export function calcLayout(serverCount, gpuType) {
 
                 if (isTargetVisible && targetLeaf) {
                     const linkClasses = `${srvId} dev-${targetLeaf.l1Id} dev-${targetLeaf.l2Id}`;
-                    links.push({
-                        x1: portX - 7, y1: portY - 14,
-                        x2: targetLeaf.p1x, y2: targetLeaf.y,
-                        color: '#3b82f6',
-                        classes: linkClasses
-                    });
-                    links.push({
-                        x1: portX + 7, y1: portY - 14,
-                        x2: targetLeaf.p2x, y2: targetLeaf.y,
-                        color: '#f97316',
-                        classes: linkClasses
-                    });
+
+                    if (isSinglePlane) {
+                        // 单平面：仅蓝色连线
+                        links.push({
+                            x1: portX, y1: portY - 14,
+                            x2: targetLeaf.p1x, y2: targetLeaf.y,
+                            color: '#3b82f6',
+                            classes: linkClasses
+                        });
+                    } else {
+                        // 双平面：蓝色+橙色连线
+                        links.push({
+                            x1: portX - 7, y1: portY - 14,
+                            x2: targetLeaf.p1x, y2: targetLeaf.y,
+                            color: '#3b82f6',
+                            classes: linkClasses
+                        });
+                        links.push({
+                            x1: portX + 7, y1: portY - 14,
+                            x2: targetLeaf.p2x, y2: targetLeaf.y,
+                            color: '#f97316',
+                            classes: linkClasses
+                        });
+                    }
                 }
             }
         }
@@ -295,6 +383,7 @@ export function calcLayout(serverCount, gpuType) {
         spineNodes,
         pods,
         links,
-        visibleLeafGroupIds
+        visibleLeafGroupIds,
+        architecture
     };
 }

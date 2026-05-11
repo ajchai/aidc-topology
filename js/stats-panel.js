@@ -4,6 +4,7 @@
  */
 
 import { appState, updateState, getGpuPrefix } from './state.js';
+import { ARCHITECTURE_TYPES, STORAGE_NIC_SPECS } from './config.js';
 
 /**
  * 切换侧边栏
@@ -76,6 +77,12 @@ function renderStatsSection(title, section) {
         if (section.meta.storageNodes !== undefined) {
             html += `<div class="flex justify-between"><span>存储节点:</span><span class="text-white">${section.meta.storageNodes} 台</span></div>`;
             html += `<div class="flex justify-between"><span>存储下行端口:</span><span class="text-white">${section.meta.totalStorageDownlink} 个</span></div>`;
+            if (section.meta.serverStoragePorts !== undefined) {
+                html += `<div class="flex justify-between"><span>算力存储端口/台:</span><span class="text-white">${section.meta.serverStoragePorts} 个</span></div>`;
+            }
+            if (section.meta.storagePorts !== undefined) {
+                html += `<div class="flex justify-between"><span>存储端口/台:</span><span class="text-white">${section.meta.storagePorts} 个</span></div>`;
+            }
         }
         html += `</div>`;
     }
@@ -138,30 +145,60 @@ export function renderHardwareStats(data) {
  * @param {string} gpuType
  * @param {number} railCount
  * @param {Object} hwData
+ * @param {Object} options
  */
-export function renderSummary(serverCount, gpuType, railCount, hwData) {
+export function renderSummary(serverCount, gpuType, railCount, hwData, options = {}) {
     const panel = document.getElementById('summaryPanel');
     if (!panel) return;
 
     const cm = hwData.compute.meta;
     const gpuPrefix = getGpuPrefix();
+    const archType = ARCHITECTURE_TYPES[options.architecture] || ARCHITECTURE_TYPES['virtual-dual-plane'];
+    const serverStorageNicSpec = STORAGE_NIC_SPECS[options.serverStorageNic || 'CX7_400G'];
+    const storageNicSpec = STORAGE_NIC_SPECS[options.storageNic || 'CX7_400G'];
 
-    panel.innerHTML = `
+    let summaryHtml = `
         <div class="p-2.5 bg-slate-800 rounded border border-slate-700">
             <div class="flex justify-between mb-1"><span class="text-slate-400">总算力节点:</span> <span class="text-white font-semibold">${serverCount} 台</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">GPU 芯片:</span> <span class="text-cyan-400 font-semibold">${serverCount * 8} 颗</span></div>
-            <div class="flex justify-between mb-1"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色)</span></div>
-            <div class="flex justify-between"><span class="text-slate-400">Rail (轨道):</span> <span class="text-white">${railCount} 轨独立</span></div>
-        </div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">组网架构:</span> <span class="text-emerald-400 font-semibold">${archType.label}</span></div>`;
+
+    if (options.architecture === 'virtual-dual-plane') {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色, VRF虚拟)</span></div>`;
+    } else if (options.architecture === 'physical-dual-plane') {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">2 (蓝色/橙色, 物理独立)</span></div>`;
+    } else {
+        summaryHtml += `<div class="flex justify-between"><span class="text-slate-400">网络平面:</span> <span class="text-white">1 (蓝色, 单平面)</span></div>`;
+    }
+    summaryHtml += `</div>`;
+
+    // 计算网信息
+    summaryHtml += `
         <div class="p-2.5 bg-slate-800 rounded border border-slate-700 mt-1.5">
             <div class="flex justify-between mb-1"><span class="text-slate-400">网络架构:</span> <span class="text-emerald-400 font-semibold">${cm.networkType}</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">划分 POD 数:</span> <span class="text-white">${cm.podCount} 个 (${cm.serversPerPod}台/POD)</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">Leaf 交换机:</span> <span class="text-white">${cm.leafSwitches} 台</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">Spine 交换机:</span> <span class="text-white">${cm.spineSwitches} 台</span></div>
             ${cm.coreSwitches > 0 ? `<div class="flex justify-between mb-1"><span class="text-slate-400">Core 交换机:</span> <span class="text-white">${cm.coreSwitches} 台</span></div>` : ''}
-            <div class="flex justify-between"><span class="text-slate-400">核心架构:</span> <span class="text-emerald-400">去堆叠 Bond</span></div>
-        </div>
-    `;
+            <div class="flex justify-between"><span class="text-slate-400">核心架构:</span> <span class="text-emerald-400">${options.architecture === 'virtual-dual-plane' ? '去堆叠 Bond' : options.architecture === 'physical-dual-plane' ? '物理双平面' : '单平面'}</span></div>
+        </div>`;
+
+    // 存储网信息
+    const storageCount = options.storageServerCount || 0;
+    if (storageCount > 0 && hwData.storage) {
+        const sm = hwData.storage.meta;
+        summaryHtml += `
+        <div class="p-2.5 bg-slate-800 rounded border border-slate-700 mt-1.5">
+            <div class="font-tiny text-emerald-400 font-semibold mb-1">存储网</div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储服务器:</span> <span class="text-white">${storageCount} 台</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">算力存储网卡:</span> <span class="text-white">${serverStorageNicSpec?.label || 'CX7 400G'}</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储网卡:</span> <span class="text-white">${storageNicSpec?.label || 'CX7 400G'} ×${options.storageNicCount || 2}</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">存储Leaf:</span> <span class="text-white">${sm.storageLeaf} 台</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">存储Spine:</span> <span class="text-white">${sm.storageSpine} 台</span></div>
+        </div>`;
+    }
+
+    panel.innerHTML = summaryHtml;
 
     // B300 才显示浮动统计面板
     const statsContainer = document.getElementById('hardwareStatsContainer');

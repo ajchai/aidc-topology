@@ -6,6 +6,7 @@
 import {
     GPU_SPECS,
     SWITCH_SPECS,
+    STORAGE_NIC_SPECS,
     STORAGE_RATIO,
     MODULES_TABLE,
     ARCHITECTURE
@@ -15,7 +16,7 @@ import {
 /** @typedef {{ conn: string, model: string, count: number, desc: string }} ModuleItem */
 /** @typedef {{ conn: string, model: string, count: number, desc: string }} CableItem */
 /** @typedef {{ networkType: string, podCount: number, serversPerPod: number, leafSwitches: number, spineSwitches: number, coreSwitches: number, [key:string]: any }} ComputeMeta */
-/** @typedef {{ storageNodes: number, totalStorageDownlink: number, storageLeaf: number, storageSpine: number }} StorageMeta */
+/** @typedef {{ storageNodes: number, totalStorageDownlink: number, storageLeaf: number, storageSpine: number, serverStoragePorts: number, storagePorts: number }} StorageMeta */
 /** @typedef {{ switches: SwitchItem[], modules: ModuleItem[], cables: CableItem[], meta: ComputeMeta }} ComputeSection */
 /** @typedef {{ switches: SwitchItem[], modules: ModuleItem[], cables: CableItem[], meta: StorageMeta }} StorageSection */
 /** @typedef {{ compute: ComputeSection, storage: StorageSection|null }} HardwareResult */
@@ -37,20 +38,57 @@ function nextPowerOf2(n) {
  * 生成缓存键
  * @param {number} serverCount
  * @param {string} gpuType
+ * @param {Object} options
  * @returns {string}
  */
-function _cacheKey(serverCount, gpuType) {
-    return `${gpuType}::${serverCount}`;
+function _cacheKey(serverCount, gpuType, options = {}) {
+    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}`;
+}
+
+/**
+ * 获取算力服务器存储网端口数
+ * @param {string} serverStorageNic
+ * @returns {number}
+ */
+function getServerStoragePorts(serverStorageNic) {
+    const spec = STORAGE_NIC_SPECS[serverStorageNic];
+    return spec ? spec.portCount : 1;
+}
+
+/**
+ * 获取存储服务器端口数（单网卡端口数 * 网卡数量）
+ * @param {string} storageNic
+ * @param {number} storageNicCount
+ * @returns {number}
+ */
+function getStoragePorts(storageNic, storageNicCount) {
+    const spec = STORAGE_NIC_SPECS[storageNic];
+    const portPerNic = spec ? spec.portCount : 1;
+    return portPerNic * storageNicCount;
 }
 
 /**
  * 计算 B300 网络设备硬件清单
  * @param {number} serverCount
  * @param {string} gpuType - GPU 规格键，如 'B300_8'
+ * @param {Object} options - 可选参数
+ * @param {string} [options.serverStorageNic='CX7_400G'] - 算力服务器存储网卡配置
+ * @param {number} [options.storageServerCount=12] - 存储服务器数量
+ * @param {string} [options.storageNic='CX7_400G'] - 存储网卡配置
+ * @param {number} [options.storageNicCount=2] - 存储网卡数量
+ * @param {string} [options.architecture='virtual-dual-plane'] - 组网架构
  * @returns {HardwareResult}
  */
-export function calcHardware(serverCount, gpuType = 'B300_8') {
-    const key = _cacheKey(serverCount, gpuType);
+export function calcHardware(serverCount, gpuType = 'B300_8', options = {}) {
+    const {
+        serverStorageNic = 'CX7_400G',
+        storageServerCount = 12,
+        storageNic = 'CX7_400G',
+        storageNicCount = 2,
+        architecture = 'virtual-dual-plane'
+    } = options;
+
+    const key = _cacheKey(serverCount, gpuType, options);
     if (_cache.has(key)) {
         return _cache.get(key);
     }
@@ -127,8 +165,7 @@ export function calcHardware(serverCount, gpuType = 'B300_8') {
     // POD 划分
     let podCount = 1;
     let serversPerPod = serverCount;
-    if (serverCount <= 32) { podCount = 1; serversPerPod = serverCount; }
-    else if (serverCount <= 64) { podCount = 2; serversPerPod = 32; }
+    if (serverCount <= 64) { podCount = 1; serversPerPod = serverCount; }
     else if (serverCount <= 128) { podCount = 2; serversPerPod = 64; }
     else if (serverCount <= 256) { podCount = Math.ceil(serverCount / 32); serversPerPod = 32; }
     else { podCount = Math.ceil(serverCount / 64); serversPerPod = 64; }
@@ -147,10 +184,19 @@ export function calcHardware(serverCount, gpuType = 'B300_8') {
         }
     };
 
-    // ===== 存储网 (serverCount >= 32) =====
-    if (serverCount >= 32) {
-        const storageNodes = Math.ceil(serverCount * STORAGE_RATIO.nodes / STORAGE_RATIO.base);
-        const totalStorageDownlink = serverCount * STORAGE_RATIO.serverPorts + storageNodes * STORAGE_RATIO.storageNodePorts;
+    // ===== 存储网 =====
+    // 使用菜单配置的存储服务器数量，不再硬编码配比
+    const actualStorageNodes = storageServerCount;
+    if (actualStorageNodes > 0 && serverCount >= 32) {
+        // 算力服务器存储网端口总数
+        const serverStoragePorts = getServerStoragePorts(serverStorageNic);
+        const totalServerStorageDownlink = serverCount * serverStoragePorts;
+
+        // 存储服务器存储网端口总数
+        const storagePorts = getStoragePorts(storageNic, storageNicCount);
+        const totalStorageNodeDownlink = actualStorageNodes * storagePorts;
+
+        const totalStorageDownlink = totalServerStorageDownlink + totalStorageNodeDownlink;
 
         let storageLeaf = Math.ceil(totalStorageDownlink / leafDownlinkPorts);
         if (storageLeaf % 2 !== 0) storageLeaf += 1;
@@ -186,10 +232,12 @@ export function calcHardware(serverCount, gpuType = 'B300_8') {
             modules: storageModules,
             cables: storageCables,
             meta: {
-                storageNodes,
+                storageNodes: actualStorageNodes,
                 totalStorageDownlink,
                 storageLeaf,
-                storageSpine
+                storageSpine,
+                serverStoragePorts,
+                storagePorts
             }
         };
     }

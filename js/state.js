@@ -32,6 +32,11 @@ export const appState = {
     serverCount: 128,
     gpuType: 'B300_8',
     railCount: 8,
+    serverStorageNic: 'CX7_400G',      // 算力服务器存储网卡配置
+    storageServerCount: 12,              // 存储服务器数量
+    storageNic: 'CX7_400G',             // 存储网卡配置
+    storageNicCount: 2,                  // 存储网卡数量
+    architecture: 'virtual-dual-plane',  // 组网架构
     viewBox: { ...LAYOUT.viewBoxDefault },
     cachedHardwareData: null,
     cachedServerCount: null,  // 用于判断缓存是否命中
