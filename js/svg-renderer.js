@@ -89,20 +89,24 @@ function renderBgLayer(layer, layout) {
     // POD 背景
     for (const pod of layout.pods) {
         const r = pod.bgRect;
+        const isGap = pod.podIndex === -1;
         frag.appendChild(createSVG('rect', {
             x: r.x, y: r.y, width: r.width, height: r.height,
-            fill: r.fill, stroke: r.stroke, 'stroke-width': r.strokeWidth, rx: r.rx
+            fill: r.fill, stroke: r.stroke, 'stroke-width': r.strokeWidth, rx: r.rx,
+            'stroke-dasharray': r.strokeDasharray || (isGap ? '6,4' : undefined)
         }));
         frag.appendChild(createText(pod.podLabel.x, pod.podLabel.y, pod.podLabel.text, {
             'font-family': pod.podLabel.fontFamily,
             'font-size': pod.podLabel.fontSize,
             fill: pod.podLabel.fill,
-            'font-weight': pod.podLabel.fontWeight
+            'font-weight': pod.podLabel.fontWeight,
+            'text-anchor': pod.podLabel.textAnchor || 'start'
         }));
         frag.appendChild(createText(pod.podSubLabel.x, pod.podSubLabel.y, pod.podSubLabel.text, {
             'font-family': pod.podSubLabel.fontFamily,
             'font-size': pod.podSubLabel.fontSize,
-            fill: pod.podSubLabel.fill
+            fill: pod.podSubLabel.fill,
+            'text-anchor': pod.podSubLabel.textAnchor || 'start'
         }));
     }
 
@@ -114,15 +118,19 @@ function renderBgLayer(layer, layout) {
  * 渲染连线层
  * @param {SVGElement} layer
  * @param {import('./layout-engine.js').TopologyLayout} layout
+ * @param {Object} linkStyle - { opacity: number, strokeWidth: number }
  */
-function renderLinkLayer(layer, layout) {
+function renderLinkLayer(layer, layout, linkStyle = {}) {
+    const opacity = linkStyle.opacity ?? 0.15;
+    const strokeWidth = linkStyle.strokeWidth ?? 1.5;
     const frag = document.createDocumentFragment();
     for (const link of layout.links) {
         const offset = Math.abs(link.y2 - link.y1) * 0.4;
         const d = `M ${link.x1} ${link.y1} C ${link.x1} ${link.y1 - offset}, ${link.x2} ${link.y2 + offset}, ${link.x2} ${link.y2}`;
         frag.appendChild(createSVG('path', {
-            d, stroke: link.color, 'stroke-width': '1.5', fill: 'none',
-            class: `link-line ${link.classes}`
+            d, stroke: link.color, 'stroke-width': String(strokeWidth), fill: 'none',
+            class: `link-line ${link.classes}`,
+            style: `opacity:${opacity}`
         }));
     }
     layer.innerHTML = '';
@@ -574,8 +582,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
         // Server
         for (const srv of pod.serverNodes) {
             if (srv.type === 'ellipsis') {
-                frag.appendChild(createText(srv.x, srv.y, srv.text, {
-                    'font-size': 14, fill: '#475569', 'font-weight': 'bold', 'text-anchor': 'middle'
+                frag.appendChild(createText(srv.x, srv.y, `← x${srv.count} →`, {
+                    'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else if (srv.type === 'server') {
                 frag.appendChild(renderServer(srv, architecture));
@@ -656,7 +664,7 @@ export function renderTopology(layout, serverCount, railCount, options = {}) {
     }
 
     renderBgLayer(bgLayer, layout);
-    renderLinkLayer(linkLayer, layout);
+    renderLinkLayer(linkLayer, layout, options.linkStyle);
     renderNodeLayer(nodeLayer, layout, serverCount, railCount, options);
 }
 

@@ -3,7 +3,7 @@
  * 整合所有模块，完成初始化与事件绑定
  */
 
-import { GPU_SPECS, STORAGE_RATIO, LAYOUT, ARCHITECTURE_TYPES } from './config.js';
+import { GPU_SPECS, STORAGE_RATIO, LAYOUT, ARCHITECTURE_TYPES, LINK_STYLE } from './config.js';
 import { appState, updateState, getGpuPrefix } from './state.js';
 import { loadSettings, debouncedSave, bindResetButton } from './storage.js';
 import { calcHardware, clearHardwareCache } from './hardware-engine.js';
@@ -15,6 +15,20 @@ import { bindExportEvents } from './export.js';
 
 /** 是否正在生成中 */
 let isGenerating = false;
+
+/**
+ * 实时应用连线样式（无需重新生成拓扑）
+ */
+function applyLinkStyle() {
+    const linkLayer = document.getElementById('linkLayer');
+    if (!linkLayer) return;
+    const { opacity, strokeWidth } = appState.linkStyle;
+    const links = linkLayer.querySelectorAll('.link-line');
+    links.forEach(link => {
+        link.style.opacity = String(opacity);
+        link.setAttribute('stroke-width', String(strokeWidth));
+    });
+}
 
 /**
  * 校验并规范化 serverCount
@@ -48,6 +62,7 @@ export async function generateTopology() {
     try {
         const serverCountInput = document.getElementById('serverCount');
         const gpuSelect = document.getElementById('gpuType');
+        const computeNicSelect = document.getElementById('computeNic');
         const serverStorageNicSelect = document.getElementById('serverStorageNic');
         const storageServerCountInput = document.getElementById('storageServerCount');
         const storageNicSelect = document.getElementById('storageNic');
@@ -62,10 +77,11 @@ export async function generateTopology() {
         const rawCount = serverCountInput.value;
         const serverCount = normalizeServerCount(rawCount);
         const gpuType = gpuSelect.value;
-        const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_8;
+        const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
         const railCount = gpuSpec.railCount;
 
         // 读取新增菜单项
+        const computeNic = computeNicSelect?.value || 'CX8_800G';
         const serverStorageNic = serverStorageNicSelect?.value || 'CX7_400G';
         const storageServerCount = Math.max(0, parseInt(storageServerCountInput?.value) || 0);
         const storageNic = storageNicSelect?.value || 'CX7_400G';
@@ -79,11 +95,13 @@ export async function generateTopology() {
 
         // 构建选项对象
         const options = {
+            computeNic,
             serverStorageNic,
             storageServerCount,
             storageNic,
             storageNicCount,
-            architecture
+            architecture,
+            linkStyle: { ...appState.linkStyle }
         };
 
         // 更新状态
@@ -91,6 +109,7 @@ export async function generateTopology() {
             serverCount,
             gpuType,
             railCount,
+            computeNic,
             serverStorageNic,
             storageServerCount,
             storageNic,
@@ -169,6 +188,7 @@ function onServerCountChange() {
 function bindInputEvents() {
     const serverCountSelect = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const computeNicSelect = document.getElementById('computeNic');
     const serverStorageNicSelect = document.getElementById('serverStorageNic');
     const storageServerCountInput = document.getElementById('storageServerCount');
     const storageNicSelect = document.getElementById('storageNic');
@@ -181,6 +201,10 @@ function bindInputEvents() {
 
     if (gpuSelect) {
         gpuSelect.addEventListener('change', generateTopology);
+    }
+
+    if (computeNicSelect) {
+        computeNicSelect.addEventListener('change', generateTopology);
     }
 
     if (serverStorageNicSelect) {
@@ -206,6 +230,32 @@ function bindInputEvents() {
             generateTopology();
         });
     }
+
+    // 连线样式滑块
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) {
+        linkOpacityRange.addEventListener('input', () => {
+            const val = parseFloat(linkOpacityRange.value);
+            appState.linkStyle.opacity = val;
+            if (linkOpacityVal) linkOpacityVal.textContent = Math.round(val * 100) + '%';
+            applyLinkStyle();
+            debouncedSave();
+        });
+    }
+
+    if (linkStrokeWidthRange) {
+        linkStrokeWidthRange.addEventListener('input', () => {
+            const val = parseFloat(linkStrokeWidthRange.value);
+            appState.linkStyle.strokeWidth = val;
+            if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = val.toFixed(1);
+            applyLinkStyle();
+            debouncedSave();
+        });
+    }
 }
 
 /**
@@ -214,6 +264,7 @@ function bindInputEvents() {
 function syncUIFromState() {
     const serverCountInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const computeNicSelect = document.getElementById('computeNic');
     const serverStorageNicSelect = document.getElementById('serverStorageNic');
     const storageServerCountInput = document.getElementById('storageServerCount');
     const storageNicSelect = document.getElementById('storageNic');
@@ -224,11 +275,23 @@ function syncUIFromState() {
 
     if (serverCountInput) serverCountInput.value = String(appState.serverCount);
     if (gpuSelect) gpuSelect.value = appState.gpuType;
+    if (computeNicSelect) computeNicSelect.value = appState.computeNic;
     if (serverStorageNicSelect) serverStorageNicSelect.value = appState.serverStorageNic;
     if (storageServerCountInput) storageServerCountInput.value = String(appState.storageServerCount);
     if (storageNicSelect) storageNicSelect.value = appState.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
     if (architectureSelect) architectureSelect.value = appState.architecture;
+
+    // 恢复连线样式控件
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) linkOpacityRange.value = String(appState.linkStyle.opacity);
+    if (linkOpacityVal) linkOpacityVal.textContent = Math.round(appState.linkStyle.opacity * 100) + '%';
+    if (linkStrokeWidthRange) linkStrokeWidthRange.value = String(appState.linkStyle.strokeWidth);
+    if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = appState.linkStyle.strokeWidth.toFixed(1);
 
     // 恢复面板折叠状态
     const icon = document.getElementById('toggleIcon');

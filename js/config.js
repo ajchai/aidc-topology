@@ -8,9 +8,9 @@
 
 /** GPU 规格配置表 */
 export const GPU_SPECS = Object.freeze({
-    A800_4: { downlinksPerServer: 8,  leafDownlinkPorts: 64, serversPerLeaf: 8,  railCount: 4, nicSpeed: '400G', label: 'NVIDIA A800 (4-Rail)' },
-    H800_8: { downlinksPerServer: 16, leafDownlinkPorts: 64, serversPerLeaf: 4,  railCount: 8, nicSpeed: '800G', label: 'NVIDIA H800 (8-Rail)' },
-    B300_8: { downlinksPerServer: 16, leafDownlinkPorts: 64, serversPerLeaf: 4,  railCount: 8, nicSpeed: '800G', label: 'NVIDIA B300 (8-Rail, 8x 800G)' }
+    B300_SXM6: { downlinksPerServer: 16, leafDownlinkPorts: 64, serversPerLeaf: 4, railCount: 8, nicSpeed: '800G', label: '8×B300 SXM6' },
+    B200_SXM6: { downlinksPerServer: 16, leafDownlinkPorts: 64, serversPerLeaf: 4, railCount: 8, nicSpeed: '800G', label: '8×B200 SXM6' },
+    H200_SXM5: { downlinksPerServer: 16, leafDownlinkPorts: 64, serversPerLeaf: 4, railCount: 8, nicSpeed: '800G', label: '8×H200 SXM5' }
 });
 
 /** 交换机规格配置表 */
@@ -78,6 +78,13 @@ export const STORAGE_NIC_SPECS = Object.freeze({
     CX7_400G:   { label: 'CX7 400G',     speed: '400G', portCount: 1, totalBandwidth: '400G' }
 });
 
+/** 算力网卡规格配置表 */
+export const COMPUTE_NIC_SPECS = Object.freeze({
+    CX8_800G:   { label: '8×CX8 800G',   portSpeed: '800G', desc: '8张CX8网卡, 单口800G' },
+    CX8_2x400G: { label: '8×CX8 2×400G', portSpeed: '400G', desc: '8张CX8网卡, 双口400G' },
+    CX7_400G:   { label: '8×CX7 400G',   portSpeed: '400G', desc: '8张CX7网卡, 单口400G' }
+});
+
 /** 组网架构选项 */
 export const ARCHITECTURE_TYPES = Object.freeze({
     'single-plane':         { label: '单平面组网',       planes: 1, mode: 'single' },
@@ -102,4 +109,10 @@ export const COLORS = Object.freeze({
         400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
         800: '#1e293b', 900: '#0f172a', 950: '#020617'
     }
+});
+
+/** 连线样式范围 */
+export const LINK_STYLE = Object.freeze({
+    opacity: { min: 0.03, max: 1.0, step: 0.01, default: 0.60 },
+    strokeWidth: { min: 0.5, max: 4.0, step: 0.5, default: 2.0 }
 });

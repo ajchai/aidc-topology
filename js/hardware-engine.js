@@ -70,7 +70,7 @@ function getStoragePorts(storageNic, storageNicCount) {
 /**
  * 计算 B300 网络设备硬件清单
  * @param {number} serverCount
- * @param {string} gpuType - GPU 规格键，如 'B300_8'
+ * @param {string} gpuType - GPU 规格键，如 'B300_SXM6'
  * @param {Object} options - 可选参数
  * @param {string} [options.serverStorageNic='CX7_400G'] - 算力服务器存储网卡配置
  * @param {number} [options.storageServerCount=12] - 存储服务器数量
@@ -79,7 +79,7 @@ function getStoragePorts(storageNic, storageNicCount) {
  * @param {string} [options.architecture='virtual-dual-plane'] - 组网架构
  * @returns {HardwareResult}
  */
-export function calcHardware(serverCount, gpuType = 'B300_8', options = {}) {
+export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     const {
         serverStorageNic = 'CX7_400G',
         storageServerCount = 12,
@@ -93,7 +93,7 @@ export function calcHardware(serverCount, gpuType = 'B300_8', options = {}) {
         return _cache.get(key);
     }
 
-    const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_8;
+    const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
     const swSpec = SWITCH_SPECS['RG-S6990-128QC2XS'];
     const result = { compute: /** @type {ComputeSection} */(null), storage: /** @type {StorageSection|null} */(null) };
 

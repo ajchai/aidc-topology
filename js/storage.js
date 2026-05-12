@@ -8,6 +8,7 @@ import { LAYOUT } from './config.js';
 
 const STORAGE_KEY = 'aidc-topology-settings';
 
+const VALID_COMPUTE_NIC_TYPES = ['CX8_800G', 'CX8_2x400G', 'CX7_400G'];
 const VALID_NIC_TYPES = ['BF3_2x200G', 'CX7_2x200G', 'CX7_400G'];
 const VALID_ARCHITECTURES = ['single-plane', 'physical-dual-plane', 'virtual-dual-plane'];
 const VALID_NIC_COUNTS = [1, 2, 4];
@@ -19,13 +20,15 @@ const VALID_NIC_COUNTS = [1, 2, 4];
 function getDefaults() {
     return {
         serverCount: 128,
-        gpuType: 'B300_8',
+        gpuType: 'B300_SXM6',
+        computeNic: 'CX8_800G',
         serverStorageNic: 'CX7_400G',
         storageServerCount: 12,
         storageNic: 'CX7_400G',
         storageNicCount: 2,
         architecture: 'virtual-dual-plane',
         currentStatsTab: 'compute',
+        linkStyle: { opacity: 0.60, strokeWidth: 2.0 },
         viewBox: { ...LAYOUT.viewBoxDefault },
         settings: {
             sidebarCollapsed: false,
@@ -42,12 +45,14 @@ export function saveSettings() {
         const payload = {
             serverCount: appState.serverCount,
             gpuType: appState.gpuType,
+            computeNic: appState.computeNic,
             serverStorageNic: appState.serverStorageNic,
             storageServerCount: appState.storageServerCount,
             storageNic: appState.storageNic,
             storageNicCount: appState.storageNicCount,
             architecture: appState.architecture,
             currentStatsTab: appState.currentStatsTab,
+            linkStyle: { ...appState.linkStyle },
             viewBox: { ...appState.viewBox },
             settings: { ...appState.settings }
         };
@@ -71,9 +76,12 @@ export function loadSettings() {
 
         // 合并并校验
         const serverCount = Math.min(2048, Math.max(1, Number(parsed.serverCount) || defaults.serverCount));
-        const gpuType = ['A800_4', 'H800_8', 'B300_8'].includes(parsed.gpuType)
+        const gpuType = ['B300_SXM6', 'B200_SXM6', 'H200_SXM5'].includes(parsed.gpuType)
             ? parsed.gpuType
             : defaults.gpuType;
+        const computeNic = VALID_COMPUTE_NIC_TYPES.includes(parsed.computeNic)
+            ? parsed.computeNic
+            : defaults.computeNic;
         const serverStorageNic = VALID_NIC_TYPES.includes(parsed.serverStorageNic)
             ? parsed.serverStorageNic
             : defaults.serverStorageNic;
@@ -90,16 +98,22 @@ export function loadSettings() {
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
+        const linkStyle = {
+            opacity: Math.min(1, Math.max(0.03, Number(parsed.linkStyle?.opacity) ?? defaults.linkStyle.opacity)),
+            strokeWidth: Math.min(4, Math.max(0.5, Number(parsed.linkStyle?.strokeWidth) ?? defaults.linkStyle.strokeWidth))
+        };
 
         updateState({
             serverCount,
             gpuType,
+            computeNic,
             serverStorageNic,
             storageServerCount,
             storageNic,
             storageNicCount,
             architecture,
             currentStatsTab,
+            linkStyle,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
             settings: {
                 sidebarCollapsed: !!parsed.settings?.sidebarCollapsed,
@@ -128,12 +142,14 @@ export function resetSettings() {
     updateState({
         serverCount: defaults.serverCount,
         gpuType: defaults.gpuType,
+        computeNic: defaults.computeNic,
         serverStorageNic: defaults.serverStorageNic,
         storageServerCount: defaults.storageServerCount,
         storageNic: defaults.storageNic,
         storageNicCount: defaults.storageNicCount,
         architecture: defaults.architecture,
         currentStatsTab: defaults.currentStatsTab,
+        linkStyle: { ...defaults.linkStyle },
         viewBox: { ...defaults.viewBox },
         cachedHardwareData: null,
         cachedServerCount: null,
@@ -143,6 +159,7 @@ export function resetSettings() {
     // 同步 UI
     const serverInput = document.getElementById('serverCount');
     const gpuSelect = document.getElementById('gpuType');
+    const computeNicSelect = document.getElementById('computeNic');
     const serverStorageNicSelect = document.getElementById('serverStorageNic');
     const storageServerCountInput = document.getElementById('storageServerCount');
     const storageNicSelect = document.getElementById('storageNic');
@@ -151,11 +168,23 @@ export function resetSettings() {
 
     if (serverInput) serverInput.value = String(defaults.serverCount);
     if (gpuSelect) gpuSelect.value = defaults.gpuType;
+    if (computeNicSelect) computeNicSelect.value = defaults.computeNic;
     if (serverStorageNicSelect) serverStorageNicSelect.value = defaults.serverStorageNic;
     if (storageServerCountInput) storageServerCountInput.value = String(defaults.storageServerCount);
     if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
     if (architectureSelect) architectureSelect.value = defaults.architecture;
+
+    // 重置连线样式控件
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) linkOpacityRange.value = String(defaults.linkStyle.opacity);
+    if (linkOpacityVal) linkOpacityVal.textContent = Math.round(defaults.linkStyle.opacity * 100) + '%';
+    if (linkStrokeWidthRange) linkStrokeWidthRange.value = String(defaults.linkStyle.strokeWidth);
+    if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = defaults.linkStyle.strokeWidth.toFixed(1);
 
     // 重置面板状态
     const sidebar = document.getElementById('sidebar');

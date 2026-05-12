@@ -4,7 +4,7 @@
  */
 
 import { appState, updateState, getGpuPrefix } from './state.js';
-import { ARCHITECTURE_TYPES, STORAGE_NIC_SPECS } from './config.js';
+import { ARCHITECTURE_TYPES, STORAGE_NIC_SPECS, COMPUTE_NIC_SPECS } from './config.js';
 
 /**
  * 切换侧边栏
@@ -154,6 +154,7 @@ export function renderSummary(serverCount, gpuType, railCount, hwData, options =
     const cm = hwData.compute.meta;
     const gpuPrefix = getGpuPrefix();
     const archType = ARCHITECTURE_TYPES[options.architecture] || ARCHITECTURE_TYPES['virtual-dual-plane'];
+    const computeNicSpec = COMPUTE_NIC_SPECS[options.computeNic || 'CX8_800G'];
     const serverStorageNicSpec = STORAGE_NIC_SPECS[options.serverStorageNic || 'CX7_400G'];
     const storageNicSpec = STORAGE_NIC_SPECS[options.storageNic || 'CX7_400G'];
 
@@ -161,6 +162,7 @@ export function renderSummary(serverCount, gpuType, railCount, hwData, options =
         <div class="p-2.5 bg-slate-800 rounded border border-slate-700">
             <div class="flex justify-between mb-1"><span class="text-slate-400">总算力节点:</span> <span class="text-white font-semibold">${serverCount} 台</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">GPU 芯片:</span> <span class="text-cyan-400 font-semibold">${serverCount * 8} 颗</span></div>
+            <div class="flex justify-between mb-1"><span class="text-slate-400">算力网卡:</span> <span class="text-cyan-400 font-semibold">${computeNicSpec?.label || options.computeNic}</span></div>
             <div class="flex justify-between mb-1"><span class="text-slate-400">组网架构:</span> <span class="text-emerald-400 font-semibold">${archType.label}</span></div>`;
 
     if (options.architecture === 'virtual-dual-plane') {

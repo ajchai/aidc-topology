@@ -30,8 +30,9 @@ import { LAYOUT } from './config.js';
 /** @type {AppState} */
 export const appState = {
     serverCount: 128,
-    gpuType: 'B300_8',
+    gpuType: 'B300_SXM6',
     railCount: 8,
+    computeNic: 'CX8_800G',            // 算力网卡配置
     serverStorageNic: 'CX7_400G',      // 算力服务器存储网卡配置
     storageServerCount: 12,              // 存储服务器数量
     storageNic: 'CX7_400G',             // 存储网卡配置
@@ -44,6 +45,10 @@ export const appState = {
     isDragging: false,
     dragStart: { x: 0, y: 0 },
     zoomFactor: 1.15,
+    linkStyle: {
+        opacity: 0.60,       // 连线明暗 (0.03 ~ 1.0)
+        strokeWidth: 2.0     // 连线粗细 (0.5 ~ 4.0)
+    },
     settings: {
         sidebarCollapsed: false,
         statsPanelCollapsed: false

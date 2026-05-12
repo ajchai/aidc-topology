@@ -228,7 +228,6 @@ svg:active { cursor: grabbing; }
 
 .link-line {
     transition: opacity 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease, stroke 0.3s ease;
-    opacity: 0.15;
 }
 
 .link-line.highlight {
@@ -256,6 +255,171 @@ svg:active { cursor: grabbing; }
 
 .led-blink {
     animation: blink 2s infinite;
+}
+
+/* ==========================================
+   侧边栏配置分组
+   ========================================== */
+.config-group {
+    border-left: 3px solid;
+    padding-left: 12px;
+    margin-bottom: 24px;
+}
+
+.config-group.compute {
+    border-color: var(--accent-blue);
+}
+
+.config-group.storage {
+    border-color: var(--accent-emerald);
+}
+
+.config-group.network {
+    border-color: var(--accent-amber);
+}
+
+.config-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.config-group.compute .config-group-header {
+    color: var(--accent-blue);
+}
+
+.config-group.storage .config-group-header {
+    color: var(--accent-emerald);
+}
+
+.config-group.network .config-group-header {
+    color: var(--accent-amber);
+}
+
+.config-group-header svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.config-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.config-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.config-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 52px;
+}
+
+.config-control {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.config-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.7;
+    margin-top: 2px;
+    width: 100%;
+    flex-basis: 100%;
+}
+
+.config-select,
+.config-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 5px 8px;
+    color: #fff;
+    font-size: 11px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.config-select:focus,
+.config-input:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.config-group-result {
+    margin-top: 20px;
+}
+
+/* ==========================================
+   Range 滑块控件
+   ========================================== */
+.config-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.config-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    border: 2px solid var(--bg-sidebar);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.config-range::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+
+.config-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    border: 2px solid var(--bg-sidebar);
+    cursor: pointer;
+}
+
+.range-value {
+    font-size: 10px;
+    color: var(--accent-amber);
+    font-weight: 600;
+    min-width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
 }
 
 /* ==========================================
@@ -465,6 +629,10 @@ select:focus {
 /* ==========================================
    按钮
    ========================================== */
+#btnGenerate {
+    margin: 16px 0;
+}
+
 .btn-primary {
     width: 100%;
     background: linear-gradient(to right, #2563eb, #4f46e5);
@@ -548,80 +716,152 @@ select:focus {
             <span class="sidebar-header-text font-title text-white">智算拓扑生成器</span>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 sidebar-content">
-            <div>
-                <label class="block font-label text-slate-300 mb-1">算力服务器数量</label>
-                <select id="serverCount" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="64">64 台</option>
-                    <option value="128" selected>128 台</option>
-                    <option value="256">256 台</option>
-                    <option value="512">512 台</option>
-                    <option value="1024">1024 台</option>
-                </select>
-                <p class="font-tiny text-slate-500 mt-1">为保证渲染性能，将展示典型结构代表</p>
+        <div class="flex-1 overflow-y-auto p-4 relative z-10 sidebar-content">
+
+            <!-- 算力服务器 -->
+            <div class="config-group compute">
+                <div class="config-group-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                        <rect x="9" y="9" width="6" height="6"></rect>
+                        <line x1="9" y1="1" x2="9" y2="4"></line>
+                        <line x1="15" y1="1" x2="15" y2="4"></line>
+                        <line x1="9" y1="20" x2="9" y2="23"></line>
+                        <line x1="15" y1="20" x2="15" y2="23"></line>
+                        <line x1="20" y1="9" x2="23" y2="9"></line>
+                        <line x1="20" y1="14" x2="23" y2="14"></line>
+                        <line x1="1" y1="9" x2="4" y2="9"></line>
+                        <line x1="1" y1="14" x2="4" y2="14"></line>
+                    </svg>
+                    <span>算力服务器</span>
+                </div>
+                <div class="config-group-body">
+                    <div class="config-item">
+                        <label class="config-label">数量</label>
+                        <div class="config-control">
+                            <select id="serverCount" class="config-select">
+                                <option value="64">64 台</option>
+                                <option value="128" selected>128 台</option>
+                                <option value="256">256 台</option>
+                                <option value="512">512 台</option>
+                                <option value="1024">1024 台</option>
+                            </select>
+                        </div>
+                        <p class="config-hint">展示典型结构代表</p>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">GPU 规格</label>
+                        <div class="config-control">
+                            <select id="gpuType" class="config-select">
+                                <option value="A800_4">A800 4-Rail</option>
+                                <option value="H800_8">H800 8-Rail</option>
+                                <option value="B300_8" selected>B300 8-Rail</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">存储网卡</label>
+                        <div class="config-control">
+                            <select id="serverStorageNic" class="config-select">
+                                <option value="BF3_2x200G">BF3 2×200G</option>
+                                <option value="CX7_2x200G">CX7 2×200G</option>
+                                <option value="CX7_400G" selected>CX7 400G</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block font-label text-slate-300 mb-1">GPU规格 / 网卡配置</label>
-                <select id="gpuType" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="A800_4">NVIDIA A800 (4-Rail)</option>
-                    <option value="H800_8">NVIDIA H800 (8-Rail)</option>
-                    <option value="B300_8" selected>NVIDIA B300 (8-Rail, 8x 800G)</option>
-                </select>
+            <!-- 存储服务器 -->
+            <div class="config-group storage">
+                <div class="config-group-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                    <span>存储服务器</span>
+                </div>
+                <div class="config-group-body">
+                    <div class="config-item">
+                        <label class="config-label">数量</label>
+                        <div class="config-control">
+                            <input id="storageServerCount" type="number" min="0" max="1024" step="1" value="12" class="config-input" />
+                        </div>
+                        <p class="config-hint">自动推荐，可手动调整</p>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">网卡型号</label>
+                        <div class="config-control">
+                            <select id="storageNic" class="config-select">
+                                <option value="BF3_2x200G">BF3 2×200G</option>
+                                <option value="CX7_2x200G">CX7 2×200G</option>
+                                <option value="CX7_400G" selected>CX7 400G</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">网卡数量</label>
+                        <div class="config-control">
+                            <select id="storageNicCount" class="config-select">
+                                <option value="1">1</option>
+                                <option value="2" selected>2</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block font-label text-slate-300 mb-1">算力服务器存储网卡配置</label>
-                <select id="serverStorageNic" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="BF3_2x200G">BF3 2 * 200G</option>
-                    <option value="CX7_2x200G">CX7 2 * 200G</option>
-                    <option value="CX7_400G" selected>CX7 400G</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-label text-slate-300 mb-1">存储服务器数量</label>
-                <input id="storageServerCount" type="number" min="0" max="1024" step="1" value="12"
-                    class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                <p class="font-tiny text-slate-500 mt-1">根据算力服务器自动推荐，可手动调整</p>
-            </div>
-
-            <div>
-                <label class="block font-label text-slate-300 mb-1">存储网卡配置</label>
-                <select id="storageNic" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="BF3_2x200G">BF3 2 * 200G</option>
-                    <option value="CX7_2x200G">CX7 2 * 200G</option>
-                    <option value="CX7_400G" selected>CX7 400G</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-label text-slate-300 mb-1">存储网卡数量</label>
-                <select id="storageNicCount" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="1">1</option>
-                    <option value="2" selected>2</option>
-                    <option value="4">4</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-label text-slate-300 mb-1">组网架构</label>
-                <select id="architecture" class="w-full bg-slate-950 border border-slate-700 rounded-md p-2 text-white font-body focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="single-plane">单平面组网</option>
-                    <option value="physical-dual-plane">物理双平面组网</option>
-                    <option value="virtual-dual-plane" selected>虚拟双平面组网</option>
-                </select>
+            <!-- 组网架构 -->
+            <div class="config-group network">
+                <div class="config-group-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    <span>组网架构</span>
+                </div>
+                <div class="config-group-body">
+                    <div class="config-item">
+                        <label class="config-label">架构</label>
+                        <div class="config-control">
+                            <select id="architecture" class="config-select">
+                                <option value="single-plane">单平面</option>
+                                <option value="physical-dual-plane">物理双平面</option>
+                                <option value="virtual-dual-plane" selected>虚拟双平面</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">连线明暗</label>
+                        <div class="config-control">
+                            <input id="linkOpacity" type="range" min="0.03" max="1" step="0.01" value="0.15" class="config-range" />
+                            <span id="linkOpacityVal" class="range-value">15%</span>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">连线粗细</label>
+                        <div class="config-control">
+                            <input id="linkStrokeWidth" type="range" min="0.5" max="4" step="0.5" value="1.5" class="config-range" />
+                            <span id="linkStrokeWidthVal" class="range-value">1.5</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <button id="btnGenerate" class="btn-primary">重新生成拓扑</button>
 
             <!-- 硬件测算结果 -->
-            <div>
-                <h3 class="font-section text-slate-200 mb-2 flex items-center gap-1">
+            <div class="config-group-result">
+                <h3 class="config-group-header compute" style="border: none; margin-bottom: 6px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-emerald-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                     </svg>
-                    硬件测算结果
+                    <span style="color: var(--accent-emerald);">硬件测算</span>
                 </h3>
                 <div id="summaryPanel" class="font-small text-slate-400 space-y-1 leading-relaxed">
                     正在初始化...
@@ -866,6 +1106,12 @@ const COLORS = Object.freeze({
     }
 });
 
+/** 连线样式范围 */
+const LINK_STYLE = Object.freeze({
+    opacity: { min: 0.03, max: 1.0, step: 0.01, default: 0.15 },
+    strokeWidth: { min: 0.5, max: 4.0, step: 0.5, default: 1.5 }
+});
+
 /* ===== js/state.js ===== */
 
 /**
@@ -912,6 +1158,10 @@ const appState = {
     isDragging: false,
     dragStart: { x: 0, y: 0 },
     zoomFactor: 1.15,
+    linkStyle: {
+        opacity: 0.15,       // 连线明暗 (0.03 ~ 1.0)
+        strokeWidth: 1.5     // 连线粗细 (0.5 ~ 4.0)
+    },
     settings: {
         sidebarCollapsed: false,
         statsPanelCollapsed: false
@@ -968,6 +1218,7 @@ function getDefaults() {
         storageNicCount: 2,
         architecture: 'virtual-dual-plane',
         currentStatsTab: 'compute',
+        linkStyle: { opacity: 0.15, strokeWidth: 1.5 },
         viewBox: { ...LAYOUT.viewBoxDefault },
         settings: {
             sidebarCollapsed: false,
@@ -990,6 +1241,7 @@ function saveSettings() {
             storageNicCount: appState.storageNicCount,
             architecture: appState.architecture,
             currentStatsTab: appState.currentStatsTab,
+            linkStyle: { ...appState.linkStyle },
             viewBox: { ...appState.viewBox },
             settings: { ...appState.settings }
         };
@@ -1032,6 +1284,10 @@ function loadSettings() {
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
+        const linkStyle = {
+            opacity: Math.min(1, Math.max(0.03, Number(parsed.linkStyle?.opacity) ?? defaults.linkStyle.opacity)),
+            strokeWidth: Math.min(4, Math.max(0.5, Number(parsed.linkStyle?.strokeWidth) ?? defaults.linkStyle.strokeWidth))
+        };
 
         updateState({
             serverCount,
@@ -1042,6 +1298,7 @@ function loadSettings() {
             storageNicCount,
             architecture,
             currentStatsTab,
+            linkStyle,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
             settings: {
                 sidebarCollapsed: !!parsed.settings?.sidebarCollapsed,
@@ -1076,6 +1333,7 @@ function resetSettings() {
         storageNicCount: defaults.storageNicCount,
         architecture: defaults.architecture,
         currentStatsTab: defaults.currentStatsTab,
+        linkStyle: { ...defaults.linkStyle },
         viewBox: { ...defaults.viewBox },
         cachedHardwareData: null,
         cachedServerCount: null,
@@ -1098,6 +1356,17 @@ function resetSettings() {
     if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
     if (architectureSelect) architectureSelect.value = defaults.architecture;
+
+    // 重置连线样式控件
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) linkOpacityRange.value = String(defaults.linkStyle.opacity);
+    if (linkOpacityVal) linkOpacityVal.textContent = Math.round(defaults.linkStyle.opacity * 100) + '%';
+    if (linkStrokeWidthRange) linkStrokeWidthRange.value = String(defaults.linkStyle.strokeWidth);
+    if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = defaults.linkStyle.strokeWidth.toFixed(1);
 
     // 重置面板状态
     const sidebar = document.getElementById('sidebar');
@@ -1294,8 +1563,7 @@ function calcHardware(serverCount, gpuType = 'B300_8', options = {}) {
     // POD 划分
     let podCount = 1;
     let serversPerPod = serverCount;
-    if (serverCount <= 32) { podCount = 1; serversPerPod = serverCount; }
-    else if (serverCount <= 64) { podCount = 2; serversPerPod = 32; }
+    if (serverCount <= 64) { podCount = 1; serversPerPod = serverCount; }
     else if (serverCount <= 128) { podCount = 2; serversPerPod = 64; }
     else if (serverCount <= 256) { podCount = Math.ceil(serverCount / 32); serversPerPod = 32; }
     else { podCount = Math.ceil(serverCount / 64); serversPerPod = 64; }
@@ -1425,6 +1693,27 @@ function buildCompressedPositions(totalCount) {
 }
 
 /**
+ * 构建 POD 压缩显示位置数组
+ * @param {number} podCount
+ * @returns {Array<{type:'pod'|'gap', actualIndex?:number, count?:number}>}
+ */
+function buildPodPositions(podCount) {
+    if (podCount <= 2) {
+        return Array.from({ length: podCount }, (_, i) => ({ type: 'pod', actualIndex: i }));
+    }
+    const omitted = podCount - 3;
+    const positions = [
+        { type: 'pod', actualIndex: 0 },           // POD 1
+        { type: 'pod', actualIndex: 1 }            // POD 2
+    ];
+    if (omitted > 0) {
+        positions.push({ type: 'gap', count: omitted }); // 省略标记
+    }
+    positions.push({ type: 'pod', actualIndex: podCount - 1 }); // 最后一个 POD
+    return positions;
+}
+
+/**
  * 获取架构显示信息
  * @param {string} architecture
  * @returns {{ label: string, desc: string, planes: number, mode: string }}
@@ -1469,9 +1758,13 @@ function calcLayout(serverCount, gpuType, options = {}) {
     const spineY = LAYOUT.spineY;
     const leafY = LAYOUT.leafY;
     const serverY = LAYOUT.serverY;
-    const canvasWidth = Math.max(LAYOUT.baseCanvasWidth, podCount * LAYOUT.podWidthFactor);
+
+    // POD 压缩位置计算
+    const podPositions = buildPodPositions(podCount);
+    const visiblePodCount = podPositions.length;
+    const canvasWidth = Math.max(LAYOUT.baseCanvasWidth, visiblePodCount * LAYOUT.podWidthFactor);
     const spineBoxWidth = canvasWidth - LAYOUT.spineBoxPadding;
-    const podWidth = spineBoxWidth / podCount;
+    const podWidth = spineBoxWidth / visiblePodCount;
 
     /** @type {BgElement[]} */
     const bgElements = [];
@@ -1590,8 +1883,42 @@ function calcLayout(serverCount, gpuType, options = {}) {
     // ===== 3. POD 层 =====
     const visibleLeafGroupIds = new Set();
 
-    for (let p = 0; p < podCount; p++) {
-        const podX = 200 + p * podWidth;
+    for (let vi = 0; vi < podPositions.length; vi++) {
+        const pos = podPositions[vi];
+        const podX = 200 + vi * podWidth;
+
+        // gap POD：省略占位符
+        if (pos.type === 'gap') {
+            pods.push({
+                podIndex: -1,
+                leafNodes: [],
+                serverNodes: [],
+                bgRect: {
+                    x: podX + 20, y: leafY - 110,
+                    width: podWidth - 40,
+                    height: serverY - leafY + 250,
+                    fill: 'rgba(30, 41, 59, 0.1)',
+                    stroke: '#334155', strokeWidth: 1, rx: 16, strokeDasharray: '6,4'
+                },
+                podLabel: {
+                    x: podX + podWidth / 2, y: leafY - 70,
+                    text: `\u2190 x${pos.count} \u2192`,
+                    fontSize: 16, fill: '#cbd5e1', fontWeight: 'bold',
+                    fontFamily: "'Inter','Microsoft YaHei',sans-serif",
+                    textAnchor: 'middle'
+                },
+                podSubLabel: {
+                    x: podX + podWidth / 2, y: leafY - 48,
+                    text: `省略 ${pos.count} 个POD`,
+                    fontSize: 11, fill: '#64748b',
+                    fontFamily: "'Inter','Microsoft YaHei',sans-serif",
+                    textAnchor: 'middle'
+                }
+            });
+            continue;
+        }
+
+        const p = pos.actualIndex;
         const podLayout = /** @type {PodLayout} */({
             podIndex: p,
             leafNodes: [],
@@ -1703,10 +2030,11 @@ function calcLayout(serverCount, gpuType, options = {}) {
             const idx = isLast ? String(actualServersInPod) : String(s + 1);
 
             if (s === LAYOUT.visualServers - 2) {
+                const skippedCount = actualServersInPod - (LAYOUT.visualServers - 1);
                 podLayout.serverNodes.push({
                     type: 'ellipsis',
                     x: cx, y: serverY + 40,
-                    text: '...... 省略部分节点 ......'
+                    count: Math.max(0, skippedCount)
                 });
                 continue;
             }
@@ -1871,20 +2199,24 @@ function renderBgLayer(layer, layout) {
     // POD 背景
     for (const pod of layout.pods) {
         const r = pod.bgRect;
+        const isGap = pod.podIndex === -1;
         frag.appendChild(createSVG('rect', {
             x: r.x, y: r.y, width: r.width, height: r.height,
-            fill: r.fill, stroke: r.stroke, 'stroke-width': r.strokeWidth, rx: r.rx
+            fill: r.fill, stroke: r.stroke, 'stroke-width': r.strokeWidth, rx: r.rx,
+            'stroke-dasharray': r.strokeDasharray || (isGap ? '6,4' : undefined)
         }));
         frag.appendChild(createText(pod.podLabel.x, pod.podLabel.y, pod.podLabel.text, {
             'font-family': pod.podLabel.fontFamily,
             'font-size': pod.podLabel.fontSize,
             fill: pod.podLabel.fill,
-            'font-weight': pod.podLabel.fontWeight
+            'font-weight': pod.podLabel.fontWeight,
+            'text-anchor': pod.podLabel.textAnchor || 'start'
         }));
         frag.appendChild(createText(pod.podSubLabel.x, pod.podSubLabel.y, pod.podSubLabel.text, {
             'font-family': pod.podSubLabel.fontFamily,
             'font-size': pod.podSubLabel.fontSize,
-            fill: pod.podSubLabel.fill
+            fill: pod.podSubLabel.fill,
+            'text-anchor': pod.podSubLabel.textAnchor || 'start'
         }));
     }
 
@@ -1896,15 +2228,19 @@ function renderBgLayer(layer, layout) {
  * 渲染连线层
  * @param {SVGElement} layer
  * @param {import('./layout-engine.js').TopologyLayout} layout
+ * @param {Object} linkStyle - { opacity: number, strokeWidth: number }
  */
-function renderLinkLayer(layer, layout) {
+function renderLinkLayer(layer, layout, linkStyle = {}) {
+    const opacity = linkStyle.opacity ?? 0.15;
+    const strokeWidth = linkStyle.strokeWidth ?? 1.5;
     const frag = document.createDocumentFragment();
     for (const link of layout.links) {
         const offset = Math.abs(link.y2 - link.y1) * 0.4;
         const d = `M ${link.x1} ${link.y1} C ${link.x1} ${link.y1 - offset}, ${link.x2} ${link.y2 + offset}, ${link.x2} ${link.y2}`;
         frag.appendChild(createSVG('path', {
-            d, stroke: link.color, 'stroke-width': '1.5', fill: 'none',
-            class: `link-line ${link.classes}`
+            d, stroke: link.color, 'stroke-width': String(strokeWidth), fill: 'none',
+            class: `link-line ${link.classes}`,
+            style: `opacity:${opacity}`
         }));
     }
     layer.innerHTML = '';
@@ -2356,8 +2692,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
         // Server
         for (const srv of pod.serverNodes) {
             if (srv.type === 'ellipsis') {
-                frag.appendChild(createText(srv.x, srv.y, srv.text, {
-                    'font-size': 14, fill: '#475569', 'font-weight': 'bold', 'text-anchor': 'middle'
+                frag.appendChild(createText(srv.x, srv.y, `← x${srv.count} →`, {
+                    'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else if (srv.type === 'server') {
                 frag.appendChild(renderServer(srv, architecture));
@@ -2438,7 +2774,7 @@ function renderTopology(layout, serverCount, railCount, options = {}) {
     }
 
     renderBgLayer(bgLayer, layout);
-    renderLinkLayer(linkLayer, layout);
+    renderLinkLayer(linkLayer, layout, options.linkStyle);
     renderNodeLayer(nodeLayer, layout, serverCount, railCount, options);
 }
 
@@ -3144,6 +3480,20 @@ function bindExportEvents() {
 let isGenerating = false;
 
 /**
+ * 实时应用连线样式（无需重新生成拓扑）
+ */
+function applyLinkStyle() {
+    const linkLayer = document.getElementById('linkLayer');
+    if (!linkLayer) return;
+    const { opacity, strokeWidth } = appState.linkStyle;
+    const links = linkLayer.querySelectorAll('.link-line');
+    links.forEach(link => {
+        link.style.opacity = String(opacity);
+        link.setAttribute('stroke-width', String(strokeWidth));
+    });
+}
+
+/**
  * 校验并规范化 serverCount
  * @param {string|number} value
  * @returns {number}
@@ -3210,7 +3560,8 @@ async function generateTopology() {
             storageServerCount,
             storageNic,
             storageNicCount,
-            architecture
+            architecture,
+            linkStyle: { ...appState.linkStyle }
         };
 
         // 更新状态
@@ -3333,6 +3684,32 @@ function bindInputEvents() {
             generateTopology();
         });
     }
+
+    // 连线样式滑块
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) {
+        linkOpacityRange.addEventListener('input', () => {
+            const val = parseFloat(linkOpacityRange.value);
+            appState.linkStyle.opacity = val;
+            if (linkOpacityVal) linkOpacityVal.textContent = Math.round(val * 100) + '%';
+            applyLinkStyle();
+            debouncedSave();
+        });
+    }
+
+    if (linkStrokeWidthRange) {
+        linkStrokeWidthRange.addEventListener('input', () => {
+            const val = parseFloat(linkStrokeWidthRange.value);
+            appState.linkStyle.strokeWidth = val;
+            if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = val.toFixed(1);
+            applyLinkStyle();
+            debouncedSave();
+        });
+    }
 }
 
 /**
@@ -3356,6 +3733,17 @@ function syncUIFromState() {
     if (storageNicSelect) storageNicSelect.value = appState.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
     if (architectureSelect) architectureSelect.value = appState.architecture;
+
+    // 恢复连线样式控件
+    const linkOpacityRange = document.getElementById('linkOpacity');
+    const linkOpacityVal = document.getElementById('linkOpacityVal');
+    const linkStrokeWidthRange = document.getElementById('linkStrokeWidth');
+    const linkStrokeWidthVal = document.getElementById('linkStrokeWidthVal');
+
+    if (linkOpacityRange) linkOpacityRange.value = String(appState.linkStyle.opacity);
+    if (linkOpacityVal) linkOpacityVal.textContent = Math.round(appState.linkStyle.opacity * 100) + '%';
+    if (linkStrokeWidthRange) linkStrokeWidthRange.value = String(appState.linkStyle.strokeWidth);
+    if (linkStrokeWidthVal) linkStrokeWidthVal.textContent = appState.linkStyle.strokeWidth.toFixed(1);
 
     // 恢复面板折叠状态
     const icon = document.getElementById('toggleIcon');

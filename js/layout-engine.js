@@ -4,7 +4,7 @@
  * 输出纯数据结构，供 svg-renderer.js 消费
  */
 
-import { LAYOUT, ARCHITECTURE, ARCHITECTURE_TYPES } from './config.js';
+import { LAYOUT, ARCHITECTURE, ARCHITECTURE_TYPES, GPU_SPECS, COMPUTE_NIC_SPECS } from './config.js';
 import { calcHardware } from './hardware-engine.js';
 
 /** @typedef {{ type: 'rect'|'text'|'line', [key:string]: any }} BgElement */
@@ -30,6 +30,27 @@ function buildCompressedPositions(totalCount) {
         { type: 'gap', count: totalCount - 3 },
         { type: 'item', idx: totalCount }
     ];
+}
+
+/**
+ * 构建 POD 压缩显示位置数组
+ * @param {number} podCount
+ * @returns {Array<{type:'pod'|'gap', actualIndex?:number, count?:number}>}
+ */
+function buildPodPositions(podCount) {
+    if (podCount <= 2) {
+        return Array.from({ length: podCount }, (_, i) => ({ type: 'pod', actualIndex: i }));
+    }
+    const omitted = podCount - 3;
+    const positions = [
+        { type: 'pod', actualIndex: 0 },           // POD 1
+        { type: 'pod', actualIndex: 1 }            // POD 2
+    ];
+    if (omitted > 0) {
+        positions.push({ type: 'gap', count: omitted }); // 省略标记
+    }
+    positions.push({ type: 'pod', actualIndex: podCount - 1 }); // 最后一个 POD
+    return positions;
 }
 
 /**
@@ -59,14 +80,17 @@ function getArchDisplayInfo(architecture) {
  * @returns {TopologyLayout}
  */
 export function calcLayout(serverCount, gpuType, options = {}) {
-    const { architecture = 'virtual-dual-plane' } = options;
+    const { architecture = 'virtual-dual-plane', computeNic = 'CX8_800G' } = options;
     const archInfo = getArchDisplayInfo(architecture);
+    const computeNicSpec = COMPUTE_NIC_SPECS[computeNic];
+    const computeNicLabel = computeNicSpec ? computeNicSpec.label : computeNic;
     const isSinglePlane = archInfo.mode === 'single';
     const isVirtualDual = archInfo.mode === 'virtual';
     const isPhysicalDual = archInfo.mode === 'physical';
 
+    const gpuSpec = GPU_SPECS[gpuType];
     const parts = gpuType.split('_');
-    const railCount = parseInt(parts[1]) || 8;
+    const railCount = gpuSpec?.railCount || 8;
 
     const hwData = calcHardware(serverCount, gpuType, options);
     const cm = hwData.compute.meta;
@@ -77,9 +101,13 @@ export function calcLayout(serverCount, gpuType, options = {}) {
     const spineY = LAYOUT.spineY;
     const leafY = LAYOUT.leafY;
     const serverY = LAYOUT.serverY;
-    const canvasWidth = Math.max(LAYOUT.baseCanvasWidth, podCount * LAYOUT.podWidthFactor);
+
+    // POD 压缩位置计算
+    const podPositions = buildPodPositions(podCount);
+    const visiblePodCount = podPositions.length;
+    const canvasWidth = Math.max(LAYOUT.baseCanvasWidth, visiblePodCount * LAYOUT.podWidthFactor);
     const spineBoxWidth = canvasWidth - LAYOUT.spineBoxPadding;
-    const podWidth = spineBoxWidth / podCount;
+    const podWidth = spineBoxWidth / visiblePodCount;
 
     /** @type {BgElement[]} */
     const bgElements = [];
@@ -198,8 +226,42 @@ export function calcLayout(serverCount, gpuType, options = {}) {
     // ===== 3. POD 层 =====
     const visibleLeafGroupIds = new Set();
 
-    for (let p = 0; p < podCount; p++) {
-        const podX = 200 + p * podWidth;
+    for (let vi = 0; vi < podPositions.length; vi++) {
+        const pos = podPositions[vi];
+        const podX = 200 + vi * podWidth;
+
+        // gap POD：省略占位符
+        if (pos.type === 'gap') {
+            pods.push({
+                podIndex: -1,
+                leafNodes: [],
+                serverNodes: [],
+                bgRect: {
+                    x: podX + 20, y: leafY - 110,
+                    width: podWidth - 40,
+                    height: serverY - leafY + 250,
+                    fill: 'rgba(30, 41, 59, 0.1)',
+                    stroke: '#334155', strokeWidth: 1, rx: 16, strokeDasharray: '6,4'
+                },
+                podLabel: {
+                    x: podX + podWidth / 2, y: leafY - 70,
+                    text: `\u2190 x${pos.count} \u2192`,
+                    fontSize: 16, fill: '#cbd5e1', fontWeight: 'bold',
+                    fontFamily: "'Inter','Microsoft YaHei',sans-serif",
+                    textAnchor: 'middle'
+                },
+                podSubLabel: {
+                    x: podX + podWidth / 2, y: leafY - 48,
+                    text: `省略 ${pos.count} 个POD`,
+                    fontSize: 11, fill: '#64748b',
+                    fontFamily: "'Inter','Microsoft YaHei',sans-serif",
+                    textAnchor: 'middle'
+                }
+            });
+            continue;
+        }
+
+        const p = pos.actualIndex;
         const podLayout = /** @type {PodLayout} */({
             podIndex: p,
             leafNodes: [],
@@ -311,10 +373,11 @@ export function calcLayout(serverCount, gpuType, options = {}) {
             const idx = isLast ? String(actualServersInPod) : String(s + 1);
 
             if (s === LAYOUT.visualServers - 2) {
+                const skippedCount = actualServersInPod - (LAYOUT.visualServers - 1);
                 podLayout.serverNodes.push({
                     type: 'ellipsis',
                     x: cx, y: serverY + 40,
-                    text: '...... 省略部分节点 ......'
+                    count: Math.max(0, skippedCount)
                 });
                 continue;
             }
@@ -331,7 +394,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                 height: LAYOUT.serverH,
                 id: srvId,
                 label: `算力节点 ${idx} (${gpuPrefix})`,
-                tooltip: `<div class="mb-1 font-semibold">Server ${idx}</div>配置: ${gpuPrefix}<br>网卡: ${railCount}x CX8`,
+                tooltip: `<div class="mb-1 font-semibold">Server ${idx}</div>配置: ${gpuPrefix}<br>网卡: ${computeNicLabel}`,
                 railCount
             });
 

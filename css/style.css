@@ -220,7 +220,6 @@ svg:active { cursor: grabbing; }
 
 .link-line {
     transition: opacity 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease, stroke 0.3s ease;
-    opacity: 0.15;
 }
 
 .link-line.highlight {
@@ -256,7 +255,7 @@ svg:active { cursor: grabbing; }
 .config-group {
     border-left: 3px solid;
     padding-left: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
 }
 
 .config-group.compute {
@@ -308,14 +307,28 @@ svg:active { cursor: grabbing; }
 
 .config-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .config-label {
     font-size: 11px;
     font-weight: 500;
     color: var(--text-muted);
-    margin-bottom: 3px;
+    margin-bottom: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 52px;
+}
+
+.config-control {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .config-hint {
@@ -323,6 +336,8 @@ svg:active { cursor: grabbing; }
     color: var(--text-muted);
     opacity: 0.7;
     margin-top: 2px;
+    width: 100%;
+    flex-basis: 100%;
 }
 
 .config-select,
@@ -331,9 +346,9 @@ svg:active { cursor: grabbing; }
     background: var(--bg-input);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    padding: 6px 8px;
+    padding: 5px 8px;
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
@@ -346,7 +361,57 @@ svg:active { cursor: grabbing; }
 }
 
 .config-group-result {
-    margin-top: 4px;
+    margin-top: 20px;
+}
+
+/* ==========================================
+   Range 滑块控件
+   ========================================== */
+.config-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.config-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    border: 2px solid var(--bg-sidebar);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.config-range::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+
+.config-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    border: 2px solid var(--bg-sidebar);
+    cursor: pointer;
+}
+
+.range-value {
+    font-size: 10px;
+    color: var(--accent-amber);
+    font-weight: 600;
+    min-width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
 }
 
 /* ==========================================
@@ -556,6 +621,10 @@ select:focus {
 /* ==========================================
    按钮
    ========================================== */
+#btnGenerate {
+    margin: 16px 0;
+}
+
 .btn-primary {
     width: 100%;
     background: linear-gradient(to right, #2563eb, #4f46e5);

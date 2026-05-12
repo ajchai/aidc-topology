@@ -30,7 +30,7 @@
             <span class="sidebar-header-text font-title text-white">智算拓扑生成器</span>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-0 relative z-10 sidebar-content">
+        <div class="flex-1 overflow-y-auto p-4 relative z-10 sidebar-content">
 
             <!-- 算力服务器 -->
             <div class="config-group compute">
@@ -52,30 +52,46 @@
                 <div class="config-group-body">
                     <div class="config-item">
                         <label class="config-label">数量</label>
-                        <select id="serverCount" class="config-select">
-                            <option value="64">64 台</option>
-                            <option value="128" selected>128 台</option>
-                            <option value="256">256 台</option>
-                            <option value="512">512 台</option>
-                            <option value="1024">1024 台</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="serverCount" class="config-select">
+                                <option value="64">64 台</option>
+                                <option value="128" selected>128 台</option>
+                                <option value="256">256 台</option>
+                                <option value="512">512 台</option>
+                                <option value="1024">1024 台</option>
+                            </select>
+                        </div>
                         <p class="config-hint">展示典型结构代表</p>
                     </div>
                     <div class="config-item">
                         <label class="config-label">GPU 规格</label>
-                        <select id="gpuType" class="config-select">
-                            <option value="A800_4">A800 4-Rail</option>
-                            <option value="H800_8">H800 8-Rail</option>
-                            <option value="B300_8" selected>B300 8-Rail</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="gpuType" class="config-select">
+                                <option value="B300_SXM6" selected>8×B300 SXM6</option>
+                                <option value="B200_SXM6">8×B200 SXM6</option>
+                                <option value="H200_SXM5">8×H200 SXM5</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">算力网卡</label>
+                        <div class="config-control">
+                            <select id="computeNic" class="config-select">
+                                <option value="CX8_800G" selected>8×CX8 800G</option>
+                                <option value="CX8_2x400G">8×CX8 2×400G</option>
+                                <option value="CX7_400G">8×CX7 400G</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="config-item">
                         <label class="config-label">存储网卡</label>
-                        <select id="serverStorageNic" class="config-select">
-                            <option value="BF3_2x200G">BF3 2×200G</option>
-                            <option value="CX7_2x200G">CX7 2×200G</option>
-                            <option value="CX7_400G" selected>CX7 400G</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="serverStorageNic" class="config-select">
+                                <option value="BF3_2x200G">BF3 2×200G</option>
+                                <option value="CX7_2x200G">CX7 2×200G</option>
+                                <option value="CX7_400G" selected>CX7 400G</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -93,24 +109,30 @@
                 <div class="config-group-body">
                     <div class="config-item">
                         <label class="config-label">数量</label>
-                        <input id="storageServerCount" type="number" min="0" max="1024" step="1" value="12" class="config-input" />
+                        <div class="config-control">
+                            <input id="storageServerCount" type="number" min="0" max="1024" step="1" value="12" class="config-input" />
+                        </div>
                         <p class="config-hint">自动推荐，可手动调整</p>
                     </div>
                     <div class="config-item">
                         <label class="config-label">网卡型号</label>
-                        <select id="storageNic" class="config-select">
-                            <option value="BF3_2x200G">BF3 2×200G</option>
-                            <option value="CX7_2x200G">CX7 2×200G</option>
-                            <option value="CX7_400G" selected>CX7 400G</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="storageNic" class="config-select">
+                                <option value="BF3_2x200G">BF3 2×200G</option>
+                                <option value="CX7_2x200G">CX7 2×200G</option>
+                                <option value="CX7_400G" selected>CX7 400G</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="config-item">
                         <label class="config-label">网卡数量</label>
-                        <select id="storageNicCount" class="config-select">
-                            <option value="1">1</option>
-                            <option value="2" selected>2</option>
-                            <option value="4">4</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="storageNicCount" class="config-select">
+                                <option value="1">1</option>
+                                <option value="2" selected>2</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -130,11 +152,27 @@
                 <div class="config-group-body">
                     <div class="config-item">
                         <label class="config-label">架构</label>
-                        <select id="architecture" class="config-select">
-                            <option value="single-plane">单平面</option>
-                            <option value="physical-dual-plane">物理双平面</option>
-                            <option value="virtual-dual-plane" selected>虚拟双平面</option>
-                        </select>
+                        <div class="config-control">
+                            <select id="architecture" class="config-select">
+                                <option value="single-plane">单平面</option>
+                                <option value="physical-dual-plane">物理双平面</option>
+                                <option value="virtual-dual-plane" selected>虚拟双平面</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">连线明暗</label>
+                        <div class="config-control">
+                            <input id="linkOpacity" type="range" min="0.03" max="1" step="0.01" value="0.60" class="config-range" />
+                            <span id="linkOpacityVal" class="range-value">60%</span>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label class="config-label">连线粗细</label>
+                        <div class="config-control">
+                            <input id="linkStrokeWidth" type="range" min="0.5" max="4" step="0.5" value="2.0" class="config-range" />
+                            <span id="linkStrokeWidthVal" class="range-value">2.0</span>
+                        </div>
                     </div>
                 </div>
             </div>

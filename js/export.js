@@ -4,16 +4,20 @@
  */
 
 import { serializeSVG } from './svg-renderer.js';
+import { appState } from './state.js';
 
 /**
- * 导出所需的关键 CSS 规则（嵌入 SVG 以确保 canvas 渲染正确）
+ * 动态生成导出所需的关键 CSS 规则（使用当前连线样式设置）
  */
-const EXPORT_CSS = `
-    .link-line { opacity: 0.15; }
-    .device-group { cursor: pointer; }
-    .led-blink { animation: none; opacity: 1; }
-    text { font-family: 'Inter','Microsoft YaHei',sans-serif; }
-`;
+function getExportCSS() {
+    const { opacity, strokeWidth } = appState.linkStyle;
+    return `
+        .link-line { opacity: ${opacity}; stroke-width: ${strokeWidth}; }
+        .device-group { cursor: pointer; }
+        .led-blink { animation: none; opacity: 1; }
+        text { font-family: 'Inter','Microsoft YaHei',sans-serif; }
+    `;
+}
 
 /**
  * 触发文件下载
@@ -50,7 +54,7 @@ function getStyledSVGString() {
 
     // 嵌入导出样式
     const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    styleEl.textContent = EXPORT_CSS;
+    styleEl.textContent = getExportCSS();
     clone.insertBefore(styleEl, clone.firstChild);
 
     // 确保命名空间
