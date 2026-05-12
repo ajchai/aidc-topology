@@ -104,10 +104,29 @@ export function calcLayout(serverCount, gpuType, options = {}) {
 
     // POD 压缩位置计算
     const podPositions = buildPodPositions(podCount);
-    const visiblePodCount = podPositions.length;
-    const canvasWidth = Math.max(LAYOUT.baseCanvasWidth, visiblePodCount * LAYOUT.podWidthFactor);
+    const normalPodCount = podPositions.filter(p => p.type === 'pod').length;
+    const podGapCount = podPositions.filter(p => p.type === 'gap').length;
+
+    // 画布宽度 = 正常POD标准宽度总和 + gap窄宽度总和
+    const canvasWidth = Math.max(
+        LAYOUT.baseCanvasWidth,
+        normalPodCount * LAYOUT.podWidthFactor + podGapCount * LAYOUT.podGapWidth
+    );
     const spineBoxWidth = canvasWidth - LAYOUT.spineBoxPadding;
-    const podWidth = spineBoxWidth / visiblePodCount;
+
+    // 正常POD均分剩余空间（扣除gap固定宽度后）
+    const normalPodWidth = podGapCount > 0 && normalPodCount > 0
+        ? (spineBoxWidth - podGapCount * LAYOUT.podGapWidth) / normalPodCount
+        : spineBoxWidth / podPositions.length;
+
+    // 累加计算每个 POD 位置的起始 x 和宽度
+    const podLayoutInfos = [];
+    let currentPodX = 200;
+    for (const pos of podPositions) {
+        const width = pos.type === 'gap' ? LAYOUT.podGapWidth : normalPodWidth;
+        podLayoutInfos.push({ ...pos, x: currentPodX, width });
+        currentPodX += width;
+    }
 
     /** @type {BgElement[]} */
     const bgElements = [];
@@ -152,16 +171,33 @@ export function calcLayout(serverCount, gpuType, options = {}) {
 
     // ===== 2. Spine 节点位置计算 =====
     const spinePositions = buildCompressedPositions(actualSpineCount);
-    const spineSpacing = spineBoxWidth / (spinePositions.length + 1);
+    const spineGapCount = spinePositions.filter(p => p.type === 'gap').length;
+    const normalSpineCount = spinePositions.filter(p => p.type === 'item').length;
+    const availableSpineWidth = spineBoxWidth;
+    const normalSpineWidth = spineGapCount > 0 && normalSpineCount > 0
+        ? (availableSpineWidth - spineGapCount * LAYOUT.spineGapWidth) / normalSpineCount
+        : availableSpineWidth / spinePositions.length;
+
+    // 累加计算每个 spine 位置的中心 x
+    const spineLayoutInfos = [];
+    let currentSpineX = 200;
+    for (const pos of spinePositions) {
+        const width = pos.type === 'gap' ? LAYOUT.spineGapWidth : normalSpineWidth;
+        const cx = currentSpineX + width / 2;
+        spineLayoutInfos.push({ ...pos, cx, width });
+        currentSpineX += width;
+    }
 
     for (let vi = 0; vi < spinePositions.length; vi++) {
-        const cx = 200 + spineSpacing * (vi + 1);
         const pos = spinePositions[vi];
+        const info = spineLayoutInfos[vi];
+        const cx = info.cx;
 
         if (pos.type === 'gap') {
             spineNodes.push({
                 type: 'gap',
                 count: pos.count,
+                totalCount: actualSpineCount,
                 x: cx - 60, y: spineY - 5,
                 width: 120, height: 40
             });
@@ -228,32 +264,37 @@ export function calcLayout(serverCount, gpuType, options = {}) {
 
     for (let vi = 0; vi < podPositions.length; vi++) {
         const pos = podPositions[vi];
-        const podX = 200 + vi * podWidth;
+        const podInfo = podLayoutInfos[vi];
+        const podX = podInfo.x;
+        const podWidth = podInfo.width;
 
         // gap POD：省略占位符
         if (pos.type === 'gap') {
+            const podBoxTop = leafY - 110;
+            const podBoxHeight = serverY - leafY + 250;
+            const podBoxCenterY = podBoxTop + podBoxHeight / 2;
             pods.push({
                 podIndex: -1,
                 leafNodes: [],
                 serverNodes: [],
                 bgRect: {
-                    x: podX + 20, y: leafY - 110,
+                    x: podX + 20, y: podBoxTop,
                     width: podWidth - 40,
-                    height: serverY - leafY + 250,
+                    height: podBoxHeight,
                     fill: 'rgba(30, 41, 59, 0.1)',
                     stroke: '#334155', strokeWidth: 1, rx: 16, strokeDasharray: '6,4'
                 },
                 podLabel: {
-                    x: podX + podWidth / 2, y: leafY - 70,
-                    text: `\u2190 x${pos.count} \u2192`,
-                    fontSize: 16, fill: '#cbd5e1', fontWeight: 'bold',
+                    x: podX + podWidth / 2, y: podBoxCenterY - 11,
+                    text: `\u2190 ${podCount} \u2192`,
+                    fontSize: 18, fill: '#fbbf24', fontWeight: 'bold',
                     fontFamily: "'Inter','Microsoft YaHei',sans-serif",
                     textAnchor: 'middle'
                 },
                 podSubLabel: {
-                    x: podX + podWidth / 2, y: leafY - 48,
-                    text: `省略 ${pos.count} 个POD`,
-                    fontSize: 11, fill: '#64748b',
+                    x: podX + podWidth / 2, y: podBoxCenterY + 11,
+                    text: `共 ${podCount} 个POD`,
+                    fontSize: 13, fill: '#94a3b8',
                     fontFamily: "'Inter','Microsoft YaHei',sans-serif",
                     textAnchor: 'middle'
                 }
@@ -291,17 +332,35 @@ export function calcLayout(serverCount, gpuType, options = {}) {
 
         // Leaf 层
         const leafPositions = buildCompressedPositions(leafPairsPerPod);
-        const leafSpacing = (podWidth - LAYOUT.podPadding * 2) / leafPositions.length;
+        const leafGapCount = leafPositions.filter(p => p.type === 'gap').length;
+        const normalLeafCount = leafPositions.filter(p => p.type === 'item').length;
+        const availableLeafWidth = podWidth - LAYOUT.podPadding * 2;
+        const normalLeafWidth = leafGapCount > 0 && normalLeafCount > 0
+            ? (availableLeafWidth - leafGapCount * LAYOUT.leafGapWidth) / normalLeafCount
+            : availableLeafWidth / leafPositions.length;
+
+        // 累加计算每个 leaf 位置的中心 x（相对于 POD 起点）
+        const leafLayoutInfos = [];
+        let currentLeafX = LAYOUT.podPadding / 2;
+        for (const pos of leafPositions) {
+            const width = pos.type === 'gap' ? LAYOUT.leafGapWidth : normalLeafWidth;
+            const cx = currentLeafX + width / 2;
+            leafLayoutInfos.push({ ...pos, cx, width });
+            currentLeafX += width;
+        }
+
         const leafNodes = [];
 
         for (let vi = 0; vi < leafPositions.length; vi++) {
-            const cx = podX + LAYOUT.podPadding / 2 + leafSpacing * (vi + 0.5);
             const pos = leafPositions[vi];
+            const info = leafLayoutInfos[vi];
+            const cx = podX + info.cx;
 
             if (pos.type === 'gap') {
                 podLayout.leafNodes.push({
                     type: 'gap',
                     count: pos.count,
+                    totalCount: leafPairsPerPod,
                     x: cx - 55, y: leafY + 5,
                     width: 110, height: 40,
                     podIndex: p
@@ -373,11 +432,10 @@ export function calcLayout(serverCount, gpuType, options = {}) {
             const idx = isLast ? String(actualServersInPod) : String(s + 1);
 
             if (s === LAYOUT.visualServers - 2) {
-                const skippedCount = actualServersInPod - (LAYOUT.visualServers - 1);
                 podLayout.serverNodes.push({
                     type: 'ellipsis',
                     x: cx, y: serverY + 40,
-                    count: Math.max(0, skippedCount)
+                    count: actualServersInPod
                 });
                 continue;
             }

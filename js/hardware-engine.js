@@ -162,13 +162,16 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     computeCables.push({ conn: 'Spine↔Leaf', model: cab.spineLeafCompute.model, count: leafSwitches * leafDownlinkPorts, desc: cab.spineLeafCompute.desc });
     computeCables.push({ conn: 'Server↔Leaf', model: cab.serverLeafCompute.model, count: serverCount * downlinksPerServer, desc: cab.serverLeafCompute.desc });
 
-    // POD 划分
+    // POD 划分 (统一按单Pod 64台计算)
     let podCount = 1;
     let serversPerPod = serverCount;
-    if (serverCount <= 64) { podCount = 1; serversPerPod = serverCount; }
-    else if (serverCount <= 128) { podCount = 2; serversPerPod = 64; }
-    else if (serverCount <= 256) { podCount = Math.ceil(serverCount / 32); serversPerPod = 32; }
-    else { podCount = Math.ceil(serverCount / 64); serversPerPod = 64; }
+    if (serverCount <= 64) {
+        podCount = 1;
+        serversPerPod = serverCount;
+    } else {
+        serversPerPod = 64;
+        podCount = Math.ceil(serverCount / serversPerPod);
+    }
 
     result.compute = {
         switches: computeSwitches,

@@ -59,6 +59,9 @@ export const LAYOUT = Object.freeze({
     podWidthFactor: 1400,
     spineBoxPadding: 400,   // 左右留白
     podPadding: 100,        // POD 内左右留白
+    podGapWidth: 350,       // POD 省略区域宽度
+    leafGapWidth: 120,      // Leaf 省略区域宽度
+    spineGapWidth: 120,     // Spine 省略区域宽度
     spineW: 200,
     spineH: 85,
     leafW: 70,

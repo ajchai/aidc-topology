@@ -149,11 +149,11 @@ function renderSpineGap(node) {
         rx: 8, fill: 'rgba(15,23,42,0.4)', stroke: '#334155',
         'stroke-width': 1, 'stroke-dasharray': '4,3'
     }));
-    frag.appendChild(createText(node.x + node.width / 2, node.y + 20, `← x${node.count} →`, {
-        'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
+    frag.appendChild(createText(node.x + node.width / 2, node.y + 20, `← ${node.totalCount} →`, {
+        'font-size': 15, fill: '#fbbf24', 'font-weight': 'bold', 'text-anchor': 'middle'
     }));
     frag.appendChild(createText(node.x + node.width / 2, node.y + 36, 'Spine省略', {
-        'font-size': 9, fill: '#475569', 'text-anchor': 'middle'
+        'font-size': 11, fill: '#94a3b8', 'text-anchor': 'middle'
     }));
     return frag;
 }
@@ -570,8 +570,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
                     rx: 8, fill: 'rgba(15,23,42,0.4)', stroke: '#334155',
                     'stroke-width': 1, 'stroke-dasharray': '4,3'
                 }));
-                frag.appendChild(createText(leaf.x + leaf.width / 2, leaf.y + 25, `← x${leaf.count} →`, {
-                    'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
+                frag.appendChild(createText(leaf.x + leaf.width / 2, leaf.y + 25, `← ${leaf.totalCount} →`, {
+                    'font-size': 15, fill: '#fbbf24', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else {
                 frag.appendChild(renderLeafSwitch(leaf, 'blue', architecture));
@@ -582,8 +582,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
         // Server
         for (const srv of pod.serverNodes) {
             if (srv.type === 'ellipsis') {
-                frag.appendChild(createText(srv.x, srv.y, `← x${srv.count} →`, {
-                    'font-size': 13, fill: '#64748b', 'font-weight': 'bold', 'text-anchor': 'middle'
+                frag.appendChild(createText(srv.x, srv.y, `← ${srv.count} →`, {
+                    'font-size': 15, fill: '#fbbf24', 'font-weight': 'bold', 'text-anchor': 'middle'
                 }));
             } else if (srv.type === 'server') {
                 frag.appendChild(renderServer(srv, architecture));

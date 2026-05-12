@@ -15,13 +15,31 @@
 - 内联构建：`node build-inline.js`（剥离 import/export，拼接 JS，内联 CSS）
 
 ### 侧边栏配置项（当前）
-- 算力服务器数量 (serverCount)
-- GPU规格 (gpuType)
+- 算力服务器数量 (serverCount): 默认 128
+- GPU规格 (gpuType): 默认 B300_8
 - 算力服务器存储网卡配置 (serverStorageNic): BF3 2*200G / CX7 2*200G / CX7 400G
 - 存储服务器数量 (storageServerCount): 0-1024, 默认12
 - 存储网卡配置 (storageNic): BF3 2*200G / CX7 2*200G / CX7 400G
 - 存储网卡数量 (storageNicCount): 1/2/4, 默认2
-- 组网架构 (architecture): 单平面/物理双平面/虚拟双平面
+- 组网架构 (architecture): 单平面/物理双平面/虚拟双平面, 默认虚拟双平面
+- 连线明暗 (linkOpacity): 默认 60%（范围 3%~100%）
+- 连线粗细 (linkStrokeWidth): 默认 2.0（范围 0.5~4.0）
+
+### 拓扑图压缩显示策略（三层统一）
+| 层级 | 阈值 | 压缩行为 |
+|------|------|----------|
+| **Spine** | >3台 | 显示第1、第2台 + gap + 最后1台 |
+| **Leaf** | >3对/POD | 显示第1、第2对 + gap + 最后1对 |
+| **Server** | 始终 | 固定显示3个槽位：第1台、第2台、ellipsis、最后1台 |
+| **POD** | >2个 | 显示POD1、POD2 + gap(>3时) + 最后1个POD |
+
+- 压缩逻辑统一使用 `buildCompressedPositions(totalCount)`（Spine/Leaf/Server）和 `buildPodPositions(podCount)`（POD层）
+- gap占位符统一风格：虚线矩形 + `← xN →` + 类型省略标签
+- 画布宽度基于可见位置数计算，最大4个POD位置（4×1400=5600px），不再随实际POD数无限扩展
+
+### 导出逻辑
+- `export.js` 使用 `getExportCSS()` 动态函数，从 `appState.linkStyle` 实时读取 `opacity` 和 `strokeWidth` 注入导出 SVG
+- 确保导出时连线的明暗和粗细与当前设置完全一致
 
 ## 用户偏好
 - 简体中文交流，专业技术背景
