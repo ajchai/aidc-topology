@@ -12,6 +12,7 @@ const VALID_COMPUTE_NIC_TYPES = ['CX8_800G', 'CX8_2x400G', 'CX7_400G'];
 const VALID_NIC_TYPES = ['BF3_2x200G', 'CX7_2x200G', 'CX7_400G'];
 const VALID_ARCHITECTURES = ['single-plane', 'physical-dual-plane', 'virtual-dual-plane'];
 const VALID_NIC_COUNTS = [1, 2, 4];
+const VALID_SWITCH_MODELS = ['RG-S6990-128QC2XS', 'RG-S6990-64OC2XS'];
 
 /**
  * 获取默认配置
@@ -27,6 +28,7 @@ function getDefaults() {
         storageNic: 'CX7_400G',
         storageNicCount: 2,
         architecture: 'virtual-dual-plane',
+        switchModel: 'RG-S6990-128QC2XS',
         currentStatsTab: 'compute',
         linkStyle: { opacity: 0.60, strokeWidth: 2.0 },
         viewBox: { ...LAYOUT.viewBoxDefault },
@@ -51,6 +53,7 @@ export function saveSettings() {
             storageNic: appState.storageNic,
             storageNicCount: appState.storageNicCount,
             architecture: appState.architecture,
+            switchModel: appState.switchModel,
             currentStatsTab: appState.currentStatsTab,
             linkStyle: { ...appState.linkStyle },
             viewBox: { ...appState.viewBox },
@@ -95,6 +98,9 @@ export function loadSettings() {
         const architecture = VALID_ARCHITECTURES.includes(parsed.architecture)
             ? parsed.architecture
             : defaults.architecture;
+        const switchModel = VALID_SWITCH_MODELS.includes(parsed.switchModel)
+            ? parsed.switchModel
+            : defaults.switchModel;
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
@@ -112,6 +118,7 @@ export function loadSettings() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             currentStatsTab,
             linkStyle,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
@@ -148,6 +155,7 @@ export function resetSettings() {
         storageNic: defaults.storageNic,
         storageNicCount: defaults.storageNicCount,
         architecture: defaults.architecture,
+        switchModel: defaults.switchModel,
         currentStatsTab: defaults.currentStatsTab,
         linkStyle: { ...defaults.linkStyle },
         viewBox: { ...defaults.viewBox },
@@ -174,6 +182,9 @@ export function resetSettings() {
     if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
     if (architectureSelect) architectureSelect.value = defaults.architecture;
+
+    const switchModelSelect = document.getElementById('switchModel');
+    if (switchModelSelect) switchModelSelect.value = defaults.switchModel;
 
     // 重置连线样式控件
     const linkOpacityRange = document.getElementById('linkOpacity');

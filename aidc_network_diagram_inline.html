@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -695,12 +695,12 @@ select:focus {
 </head>
 <body class="bg-slate-950 text-slate-200 h-screen w-screen overflow-hidden flex">
 
-    <!-- 侧边栏 -->
+    <!-- 侧边栏-->
     <aside id="sidebar" class="bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-2xl shrink-0 relative">
         <div class="sidebar-gradient"></div>
 
         <!-- 折叠切换按钮 -->
-        <div id="sidebarToggle" role="button" aria-label="切换侧边栏">
+        <div id="sidebarToggle" role="button" aria-label="切换侧边栏>
             <svg id="toggleIcon" xmlns="http://www.w3.org/2000/svg" class="shrink-0" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -713,12 +713,12 @@ select:focus {
                 <line x1="6" y1="6" x2="6.01" y2="6"></line>
                 <line x1="6" y1="18" x2="6.01" y2="18"></line>
             </svg>
-            <span class="sidebar-header-text font-title text-white">智算拓扑生成器</span>
+            <span class="sidebar-header-text font-title text-white">智算拓扑生成器/span>
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 relative z-10 sidebar-content">
 
-            <!-- 算力服务器 -->
+            <!-- 算力服务器-->
             <div class="config-group compute">
                 <div class="config-group-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -733,7 +733,7 @@ select:focus {
                         <line x1="1" y1="9" x2="4" y2="9"></line>
                         <line x1="1" y1="14" x2="4" y2="14"></line>
                     </svg>
-                    <span>算力服务器</span>
+                    <span>算力服务器/span>
                 </div>
                 <div class="config-group-body">
                     <div class="config-item">
@@ -782,7 +782,7 @@ select:focus {
                 </div>
             </div>
 
-            <!-- 存储服务器 -->
+            <!-- 存储服务器-->
             <div class="config-group storage">
                 <div class="config-group-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -790,7 +790,7 @@ select:focus {
                         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                     </svg>
-                    <span>存储服务器</span>
+                    <span>存储服务器/span>
                 </div>
                 <div class="config-group-body">
                     <div class="config-item">
@@ -846,6 +846,15 @@ select:focus {
                             </select>
                         </div>
                     </div>
+                    <div class="config-item" id="switchModelWrapper">
+                        <label class="config-label">交换机选型</label>
+                        <div class="config-control">
+                            <select id="switchModel" class="config-select">
+                                <option value="RG-S6990-128QC2XS" selected>RG-S6990-128QC2XS</option>
+                                <option value="RG-S6990-64OC2XS">RG-S6990-64OC2XS</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="config-item">
                         <label class="config-label">连线明暗</label>
                         <div class="config-control">
@@ -874,17 +883,17 @@ select:focus {
                     <span style="color: var(--accent-emerald);">硬件测算</span>
                 </h3>
                 <div id="summaryPanel" class="font-small text-slate-400 space-y-1 leading-relaxed">
-                    正在初始化...
+                    正在初始化..
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- 主区域 -->
+    <!-- 主区域-->
     <main class="flex-1 relative overflow-hidden">
         <div class="bg-grid"></div>
 
-        <!-- 工具栏 -->
+        <!-- 工具栏-->
         <div class="toolbar">
             <div class="toolbar-group">
                 <button id="btnResetZoom" title="适应屏幕">
@@ -962,7 +971,7 @@ select:focus {
             </svg>
         </div>
 
-        <!-- 底部操作提示浮动条 -->
+        <!-- 底部操作提示浮动栏-->
         <div class="hint-bar">
             <span class="flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
@@ -996,8 +1005,8 @@ select:focus {
                 </div>
                 <div class="panel-body">
                     <div class="flex gap-2 mb-2">
-                        <span class="stat-tab active" data-tab="compute" id="tabCompute">计算网</span>
-                        <span class="stat-tab" data-tab="storage" id="tabStorage">存储网</span>
+                        <span class="stat-tab active" data-tab="compute" id="tabCompute">计算网/span>
+                        <span class="stat-tab" data-tab="storage" id="tabStorage">存储网/span>
                     </div>
                     <div id="statsContent" class="space-y-2"></div>
                 </div>
@@ -1032,6 +1041,12 @@ const SWITCH_SPECS = Object.freeze({
         uplinkPorts: 64,
         portSpeed: '400G',
         desc: '64下行+64上行 400G'
+    },
+    'RG-S6990-64OC2XS': {
+        downlinkPorts: 32,
+        uplinkPorts: 32,
+        portSpeed: '400G',
+        desc: '32下行+32上行 400G'
     }
 });
 
@@ -1172,6 +1187,7 @@ const appState = {
     storageNic: 'CX7_400G',             // 存储网卡配置
     storageNicCount: 2,                  // 存储网卡数量
     architecture: 'virtual-dual-plane',  // 组网架构
+    switchModel: 'RG-S6990-128QC2XS',     // 交换机选型
     viewBox: { ...LAYOUT.viewBoxDefault },
     cachedHardwareData: null,
     cachedServerCount: null,  // 用于判断缓存是否命中
@@ -1225,6 +1241,7 @@ const VALID_COMPUTE_NIC_TYPES = ['CX8_800G', 'CX8_2x400G', 'CX7_400G'];
 const VALID_NIC_TYPES = ['BF3_2x200G', 'CX7_2x200G', 'CX7_400G'];
 const VALID_ARCHITECTURES = ['single-plane', 'physical-dual-plane', 'virtual-dual-plane'];
 const VALID_NIC_COUNTS = [1, 2, 4];
+const VALID_SWITCH_MODELS = ['RG-S6990-128QC2XS', 'RG-S6990-64OC2XS'];
 
 /**
  * 获取默认配置
@@ -1240,6 +1257,7 @@ function getDefaults() {
         storageNic: 'CX7_400G',
         storageNicCount: 2,
         architecture: 'virtual-dual-plane',
+        switchModel: 'RG-S6990-128QC2XS',
         currentStatsTab: 'compute',
         linkStyle: { opacity: 0.60, strokeWidth: 2.0 },
         viewBox: { ...LAYOUT.viewBoxDefault },
@@ -1264,6 +1282,7 @@ function saveSettings() {
             storageNic: appState.storageNic,
             storageNicCount: appState.storageNicCount,
             architecture: appState.architecture,
+            switchModel: appState.switchModel,
             currentStatsTab: appState.currentStatsTab,
             linkStyle: { ...appState.linkStyle },
             viewBox: { ...appState.viewBox },
@@ -1308,6 +1327,9 @@ function loadSettings() {
         const architecture = VALID_ARCHITECTURES.includes(parsed.architecture)
             ? parsed.architecture
             : defaults.architecture;
+        const switchModel = VALID_SWITCH_MODELS.includes(parsed.switchModel)
+            ? parsed.switchModel
+            : defaults.switchModel;
         const currentStatsTab = ['compute', 'storage'].includes(parsed.currentStatsTab)
             ? parsed.currentStatsTab
             : defaults.currentStatsTab;
@@ -1325,6 +1347,7 @@ function loadSettings() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             currentStatsTab,
             linkStyle,
             viewBox: parsed.viewBox || { ...defaults.viewBox },
@@ -1361,6 +1384,7 @@ function resetSettings() {
         storageNic: defaults.storageNic,
         storageNicCount: defaults.storageNicCount,
         architecture: defaults.architecture,
+        switchModel: defaults.switchModel,
         currentStatsTab: defaults.currentStatsTab,
         linkStyle: { ...defaults.linkStyle },
         viewBox: { ...defaults.viewBox },
@@ -1387,6 +1411,9 @@ function resetSettings() {
     if (storageNicSelect) storageNicSelect.value = defaults.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(defaults.storageNicCount);
     if (architectureSelect) architectureSelect.value = defaults.architecture;
+
+    const switchModelSelect = document.getElementById('switchModel');
+    if (switchModelSelect) switchModelSelect.value = defaults.switchModel;
 
     // 重置连线样式控件
     const linkOpacityRange = document.getElementById('linkOpacity');
@@ -1471,7 +1498,7 @@ function nextPowerOf2(n) {
  * @returns {string}
  */
 function _cacheKey(serverCount, gpuType, options = {}) {
-    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}`;
+    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}::${options.switchModel || ''}`;
 }
 
 /**
@@ -1523,17 +1550,35 @@ function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     }
 
     const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
-    const swSpec = SWITCH_SPECS['RG-S6990-128QC2XS'];
+    const isSinglePlane = architecture === 'single-plane';
+    const switchModel = isSinglePlane
+        ? 'RG-S6990-64OC2XS'
+        : (options.switchModel || 'RG-S6990-128QC2XS');
+    const swSpec = SWITCH_SPECS[switchModel] || SWITCH_SPECS['RG-S6990-128QC2XS'];
     const result = { compute: /** @type {ComputeSection} */(null), storage: /** @type {StorageSection|null} */(null) };
 
     // ===== 计算网 =====
-    const downlinksPerServer = gpuSpec.downlinksPerServer;
-    const leafDownlinkPorts = gpuSpec.leafDownlinkPorts;
+    const downlinksPerServer = isSinglePlane
+        ? (gpuSpec.downlinksPerServer / 2)
+        : gpuSpec.downlinksPerServer;
+    const leafDownlinkPorts = isSinglePlane
+        ? swSpec.downlinkPorts
+        : gpuSpec.leafDownlinkPorts;
     const serversPerLeaf = leafDownlinkPorts / downlinksPerServer;
 
     // Leaf 数量
-    let leafSwitches = Math.ceil(serverCount / serversPerLeaf);
-    if (leafSwitches % 2 !== 0) leafSwitches += 1;
+    let leafSwitches = 0;
+    let podCount = 0;
+    let serversPerPod = 0;
+
+    if (isSinglePlane) {
+        serversPerPod = 32;
+        podCount = Math.ceil(serverCount / serversPerPod);
+        leafSwitches = podCount * 8;
+    } else {
+        leafSwitches = Math.ceil(serverCount / serversPerLeaf);
+        if (leafSwitches % 2 !== 0) leafSwitches += 1;
+    }
 
     // Spine / Core 数量
     let spineSwitches = 0;
@@ -1553,20 +1598,20 @@ function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     const computeSwitches = /** @type {SwitchItem[]} */([]);
     computeSwitches.push({
         role: 'Leaf',
-        model: 'RG-S6990-128QC2XS',
+        model: switchModel,
         count: leafSwitches,
         desc: `${leafDownlinkPorts}下行+${leafDownlinkPorts}上行 400G`
     });
     computeSwitches.push({
         role: 'Spine',
-        model: 'RG-S6990-128QC2XS',
+        model: switchModel,
         count: spineSwitches,
         desc: `${leafDownlinkPorts * 2} 400G全互联`
     });
     if (coreSwitches > 0) {
         computeSwitches.push({
             role: 'Core',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: coreSwitches,
             desc: '核心层汇聚'
         });
@@ -1592,12 +1637,16 @@ function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     computeCables.push({ conn: 'Server↔Leaf', model: cab.serverLeafCompute.model, count: serverCount * downlinksPerServer, desc: cab.serverLeafCompute.desc });
 
     // POD 划分
-    let podCount = 1;
-    let serversPerPod = serverCount;
-    if (serverCount <= 64) { podCount = 1; serversPerPod = serverCount; }
-    else if (serverCount <= 128) { podCount = 2; serversPerPod = 64; }
-    else if (serverCount <= 256) { podCount = Math.ceil(serverCount / 32); serversPerPod = 32; }
-    else { podCount = Math.ceil(serverCount / 64); serversPerPod = 64; }
+    if (!isSinglePlane) {
+        if (serverCount <= 64) {
+            podCount = 1;
+            serversPerPod = serverCount;
+        } else {
+            serversPerPod = 64;
+            podCount = Math.ceil(serverCount / serversPerPod);
+        }
+    }
+    // 单平面下 podCount / serversPerPod / leafSwitches 已在上方计算
 
     result.compute = {
         switches: computeSwitches,
@@ -1635,13 +1684,13 @@ function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
         const storageSwitches = /** @type {SwitchItem[]} */([]);
         storageSwitches.push({
             role: 'Leaf',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: storageLeaf,
             desc: `${leafDownlinkPorts}下行+${leafDownlinkPorts}上行 400G`
         });
         storageSwitches.push({
             role: 'Spine',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: storageSpine,
             desc: `${leafDownlinkPorts * 2} 400G全互联`
         });
@@ -1787,7 +1836,7 @@ function calcLayout(serverCount, gpuType, options = {}) {
     const cm = hwData.compute.meta;
     const actualSpineCount = cm.spineSwitches;
     const podCount = cm.podCount;
-    const leafPairsPerPod = Math.ceil(cm.leafSwitches / podCount / 2);
+    const leafGroupsPerPod = isSinglePlane ? Math.ceil(cm.leafSwitches / podCount) : Math.ceil(cm.leafSwitches / podCount / 2);
 
     const spineY = LAYOUT.spineY;
     const leafY = LAYOUT.leafY;
@@ -2014,15 +2063,16 @@ function calcLayout(serverCount, gpuType, options = {}) {
             fontSize: 16, fill: '#cbd5e1', fontWeight: 'bold',
             fontFamily: "'Inter','Microsoft YaHei',sans-serif"
         };
+        const leafCountDisplay = isSinglePlane ? leafGroupsPerPod : leafGroupsPerPod * 2;
         podLayout.podSubLabel = {
             x: podX + 50, y: leafY - 48,
-            text: `包含 ${leafPairsPerPod * 2}台 Leaf, 下联 ${Math.min(cm.serversPerPod, serverCount - p * cm.serversPerPod)}台 算力节点`,
+            text: `包含 ${leafCountDisplay}台 Leaf, 下联 ${Math.min(cm.serversPerPod, serverCount - p * cm.serversPerPod)}台 算力节点`,
             fontSize: 11, fill: '#64748b',
             fontFamily: "'Inter','Microsoft YaHei',sans-serif"
         };
 
         // Leaf 层
-        const leafPositions = buildCompressedPositions(leafPairsPerPod);
+        const leafPositions = buildCompressedPositions(leafGroupsPerPod);
         const leafGapCount = leafPositions.filter(p => p.type === 'gap').length;
         const normalLeafCount = leafPositions.filter(p => p.type === 'item').length;
         const availableLeafWidth = podWidth - LAYOUT.podPadding * 2;
@@ -2051,7 +2101,7 @@ function calcLayout(serverCount, gpuType, options = {}) {
                 podLayout.leafNodes.push({
                     type: 'gap',
                     count: pos.count,
-                    totalCount: leafPairsPerPod,
+                    totalCount: leafGroupsPerPod,
                     x: cx - 55, y: leafY + 5,
                     width: 110, height: 40,
                     podIndex: p
@@ -2072,29 +2122,31 @@ function calcLayout(serverCount, gpuType, options = {}) {
                 y: leafY,
                 l1Id,
                 l2Id,
-                l1Label: `L1-${idx}`,
+                l1Label: isSinglePlane ? `Leaf-${idx}` : `L1-${idx}`,
                 l2Label: `L2-${idx}`,
-                p1x: cx - 45,
-                p2x: cx + 45,
+                p1x: isSinglePlane ? cx : cx - 45,
+                p2x: isSinglePlane ? cx : cx + 45,
                 bottomY: leafY + 50,
                 podIndex: p,
-                tooltipL1: `<b>L1-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面1)<br>上行: 64<br>下行: 64`,
+                tooltipL1: isSinglePlane
+                    ? `<b>Leaf-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (单平面)<br>上行: 32<br>下行: 32`
+                    : `<b>L1-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面1)<br>上行: 64<br>下行: 64`,
                 tooltipL2: `<b>L2-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面2)<br>上行: 64<br>下行: 64`
             };
             podLayout.leafNodes.push(node);
-            leafNodes.push({ id: idx, p1x: cx - 45, p2x: cx + 45, y: leafY + 50, l1Id, l2Id });
+            leafNodes.push({ id: idx, p1x: isSinglePlane ? cx : cx - 45, p2x: isSinglePlane ? cx : cx + 45, y: leafY + 50, l1Id, l2Id });
 
             // 到 Spine 的连线
             spineNodes.forEach(sp => {
                 if (sp.type === 'gap') return;
 
                 if (isSinglePlane) {
-                    // 单平面：仅蓝色连线
+                    // 单平面：仅蓝色连线，从Leaf中心到Spine中心
                     links.push({
-                        x1: cx - 45, y1: leafY,
+                        x1: cx, y1: leafY,
                         x2: sp.p1x, y2: sp.bottomY,
                         color: '#3b82f6',
-                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l1Id} dev-${sp.id} ${sp.id}`
                     });
                 } else {
                     // 双平面：蓝色+橙色连线
@@ -2102,13 +2154,13 @@ function calcLayout(serverCount, gpuType, options = {}) {
                         x1: cx - 45, y1: leafY,
                         x2: sp.p1x, y2: sp.bottomY,
                         color: '#3b82f6',
-                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l1Id} dev-${sp.id} ${sp.id}`
                     });
                     links.push({
                         x1: cx + 45, y1: leafY,
                         x2: sp.p2x, y2: sp.bottomY,
                         color: '#f97316',
-                        classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l2Id} dev-${sp.id} ${sp.id}`
                     });
                 }
             });
@@ -2160,7 +2212,7 @@ function calcLayout(serverCount, gpuType, options = {}) {
                     const linkClasses = `${srvId} dev-${targetLeaf.l1Id} dev-${targetLeaf.l2Id}`;
 
                     if (isSinglePlane) {
-                        // 单平面：仅蓝色连线
+                        // 单平面：仅蓝色连线，从Server端口到Leaf中心
                         links.push({
                             x1: portX, y1: portY - 14,
                             x2: targetLeaf.p1x, y2: targetLeaf.y,
@@ -3628,6 +3680,7 @@ async function generateTopology() {
         const storageNicSelect = document.getElementById('storageNic');
         const storageNicCountSelect = document.getElementById('storageNicCount');
         const architectureSelect = document.getElementById('architecture');
+        const switchModelSelect = document.getElementById('switchModel');
 
         if (!serverCountInput || !gpuSelect) {
             console.error('Required DOM elements not found');
@@ -3647,6 +3700,10 @@ async function generateTopology() {
         const storageNic = storageNicSelect?.value || 'CX7_400G';
         const storageNicCount = parseInt(storageNicCountSelect?.value) || 2;
         const architecture = architectureSelect?.value || 'virtual-dual-plane';
+        let switchModel = switchModelSelect?.value || 'RG-S6990-128QC2XS';
+        if (architecture === 'single-plane') {
+            switchModel = 'RG-S6990-64OC2XS';
+        }
 
         // 同步输入框（如果输入了非法值）
         if (String(serverCount) !== String(rawCount)) {
@@ -3661,6 +3718,7 @@ async function generateTopology() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             linkStyle: { ...appState.linkStyle }
         };
 
@@ -3675,6 +3733,7 @@ async function generateTopology() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             cachedHardwareData: null
         });
 
@@ -3754,6 +3813,7 @@ function bindInputEvents() {
     const storageNicSelect = document.getElementById('storageNic');
     const storageNicCountSelect = document.getElementById('storageNicCount');
     const architectureSelect = document.getElementById('architecture');
+    const switchModelSelect = document.getElementById('switchModel');
 
     if (serverCountSelect) {
         serverCountSelect.addEventListener('change', onServerCountChange);
@@ -3786,6 +3846,33 @@ function bindInputEvents() {
 
     if (architectureSelect) {
         architectureSelect.addEventListener('change', () => {
+            const arch = architectureSelect.value;
+            const switchModelWrapper = document.getElementById('switchModelWrapper');
+            const switchModelSelect = document.getElementById('switchModel');
+
+            if (switchModelWrapper && switchModelSelect) {
+                if (arch === 'single-plane') {
+                    // 单平面：显示交换机选型，但禁用并强制设置为RG-S6990-64OC2XS
+                    switchModelWrapper.style.display = '';
+                    switchModelSelect.value = 'RG-S6990-64OC2XS';
+                    switchModelSelect.disabled = true;
+                } else {
+                    switchModelWrapper.style.display = '';
+                    switchModelSelect.disabled = false;
+                    // 切回双平面时，如果当前被锁定为单平面型号，恢复默认双平面型号
+                    if (switchModelSelect.value === 'RG-S6990-64OC2XS') {
+                        switchModelSelect.value = 'RG-S6990-128QC2XS';
+                    }
+                }
+            }
+
+            clearHardwareCache();
+            generateTopology();
+        });
+    }
+
+    if (switchModelSelect) {
+        switchModelSelect.addEventListener('change', () => {
             clearHardwareCache();
             generateTopology();
         });
@@ -3830,6 +3917,7 @@ function syncUIFromState() {
     const storageNicSelect = document.getElementById('storageNic');
     const storageNicCountSelect = document.getElementById('storageNicCount');
     const architectureSelect = document.getElementById('architecture');
+    const switchModelSelect = document.getElementById('switchModel');
     const sidebar = document.getElementById('sidebar');
     const hwPanel = document.getElementById('hwFloatPanel');
 
@@ -3841,6 +3929,20 @@ function syncUIFromState() {
     if (storageNicSelect) storageNicSelect.value = appState.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
     if (architectureSelect) architectureSelect.value = appState.architecture;
+    if (switchModelSelect) switchModelSelect.value = appState.switchModel;
+
+    // 同步交换机选型显示状态
+    const switchModelWrapper = document.getElementById('switchModelWrapper');
+    if (switchModelWrapper && architectureSelect && switchModelSelect) {
+        if (architectureSelect.value === 'single-plane') {
+            switchModelWrapper.style.display = '';
+            switchModelSelect.value = 'RG-S6990-64OC2XS';
+            switchModelSelect.disabled = true;
+        } else {
+            switchModelWrapper.style.display = '';
+            switchModelSelect.disabled = false;
+        }
+    }
 
     // 恢复连线样式控件
     const linkOpacityRange = document.getElementById('linkOpacity');

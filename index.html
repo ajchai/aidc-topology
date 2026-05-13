@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,7 @@
 </head>
 <body class="bg-slate-950 text-slate-200 h-screen w-screen overflow-hidden flex">
 
-    <!-- 侧边栏 -->
+    <!-- 侧边栏-->
     <aside id="sidebar" class="bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-2xl shrink-0 relative">
         <div class="sidebar-gradient"></div>
 
@@ -32,7 +32,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 relative z-10 sidebar-content">
 
-            <!-- 算力服务器 -->
+            <!-- 算力服务器-->
             <div class="config-group compute">
                 <div class="config-group-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -96,7 +96,7 @@
                 </div>
             </div>
 
-            <!-- 存储服务器 -->
+            <!-- 存储服务器-->
             <div class="config-group storage">
                 <div class="config-group-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -160,6 +160,15 @@
                             </select>
                         </div>
                     </div>
+                    <div class="config-item" id="switchModelWrapper">
+                        <label class="config-label">交换机选型</label>
+                        <div class="config-control">
+                            <select id="switchModel" class="config-select">
+                                <option value="RG-S6990-128QC2XS" selected>RG-S6990-128QC2XS</option>
+                                <option value="RG-S6990-64OC2XS">RG-S6990-64OC2XS</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="config-item">
                         <label class="config-label">连线明暗</label>
                         <div class="config-control">
@@ -188,17 +197,17 @@
                     <span style="color: var(--accent-emerald);">硬件测算</span>
                 </h3>
                 <div id="summaryPanel" class="font-small text-slate-400 space-y-1 leading-relaxed">
-                    正在初始化...
+                    正在初始化..
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- 主区域 -->
+    <!-- 主区域-->
     <main class="flex-1 relative overflow-hidden">
         <div class="bg-grid"></div>
 
-        <!-- 工具栏 -->
+        <!-- 工具栏-->
         <div class="toolbar">
             <div class="toolbar-group">
                 <button id="btnResetZoom" title="适应屏幕">
@@ -276,7 +285,7 @@
             </svg>
         </div>
 
-        <!-- 底部操作提示浮动条 -->
+        <!-- 底部操作提示浮动栏-->
         <div class="hint-bar">
             <span class="flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>

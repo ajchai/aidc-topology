@@ -1,4 +1,4 @@
-/**
+﻿/**
  * hardware-engine.js - B300 网络设备硬件计算引擎
  * 纯函数设计，输入确定则输出确定，支持 Memoization 缓存
  */
@@ -42,7 +42,7 @@ function nextPowerOf2(n) {
  * @returns {string}
  */
 function _cacheKey(serverCount, gpuType, options = {}) {
-    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}`;
+    return `${gpuType}::${serverCount}::${options.serverStorageNic || ''}::${options.storageServerCount || 0}::${options.storageNic || ''}::${options.storageNicCount || 0}::${options.architecture || ''}::${options.switchModel || ''}`;
 }
 
 /**
@@ -94,17 +94,35 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     }
 
     const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
-    const swSpec = SWITCH_SPECS['RG-S6990-128QC2XS'];
+    const isSinglePlane = architecture === 'single-plane';
+    const switchModel = isSinglePlane
+        ? 'RG-S6990-64OC2XS'
+        : (options.switchModel || 'RG-S6990-128QC2XS');
+    const swSpec = SWITCH_SPECS[switchModel] || SWITCH_SPECS['RG-S6990-128QC2XS'];
     const result = { compute: /** @type {ComputeSection} */(null), storage: /** @type {StorageSection|null} */(null) };
 
     // ===== 计算网 =====
-    const downlinksPerServer = gpuSpec.downlinksPerServer;
-    const leafDownlinkPorts = gpuSpec.leafDownlinkPorts;
+    const downlinksPerServer = isSinglePlane
+        ? (gpuSpec.downlinksPerServer / 2)
+        : gpuSpec.downlinksPerServer;
+    const leafDownlinkPorts = isSinglePlane
+        ? swSpec.downlinkPorts
+        : gpuSpec.leafDownlinkPorts;
     const serversPerLeaf = leafDownlinkPorts / downlinksPerServer;
 
     // Leaf 数量
-    let leafSwitches = Math.ceil(serverCount / serversPerLeaf);
-    if (leafSwitches % 2 !== 0) leafSwitches += 1;
+    let leafSwitches = 0;
+    let podCount = 0;
+    let serversPerPod = 0;
+
+    if (isSinglePlane) {
+        serversPerPod = 32;
+        podCount = Math.ceil(serverCount / serversPerPod);
+        leafSwitches = podCount * 8;
+    } else {
+        leafSwitches = Math.ceil(serverCount / serversPerLeaf);
+        if (leafSwitches % 2 !== 0) leafSwitches += 1;
+    }
 
     // Spine / Core 数量
     let spineSwitches = 0;
@@ -124,20 +142,20 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     const computeSwitches = /** @type {SwitchItem[]} */([]);
     computeSwitches.push({
         role: 'Leaf',
-        model: 'RG-S6990-128QC2XS',
+        model: switchModel,
         count: leafSwitches,
         desc: `${leafDownlinkPorts}下行+${leafDownlinkPorts}上行 400G`
     });
     computeSwitches.push({
         role: 'Spine',
-        model: 'RG-S6990-128QC2XS',
+        model: switchModel,
         count: spineSwitches,
         desc: `${leafDownlinkPorts * 2} 400G全互联`
     });
     if (coreSwitches > 0) {
         computeSwitches.push({
             role: 'Core',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: coreSwitches,
             desc: '核心层汇聚'
         });
@@ -162,16 +180,17 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     computeCables.push({ conn: 'Spine↔Leaf', model: cab.spineLeafCompute.model, count: leafSwitches * leafDownlinkPorts, desc: cab.spineLeafCompute.desc });
     computeCables.push({ conn: 'Server↔Leaf', model: cab.serverLeafCompute.model, count: serverCount * downlinksPerServer, desc: cab.serverLeafCompute.desc });
 
-    // POD 划分 (统一按单Pod 64台计算)
-    let podCount = 1;
-    let serversPerPod = serverCount;
-    if (serverCount <= 64) {
-        podCount = 1;
-        serversPerPod = serverCount;
-    } else {
-        serversPerPod = 64;
-        podCount = Math.ceil(serverCount / serversPerPod);
+    // POD 划分
+    if (!isSinglePlane) {
+        if (serverCount <= 64) {
+            podCount = 1;
+            serversPerPod = serverCount;
+        } else {
+            serversPerPod = 64;
+            podCount = Math.ceil(serverCount / serversPerPod);
+        }
     }
+    // 单平面下 podCount / serversPerPod / leafSwitches 已在上方计算
 
     result.compute = {
         switches: computeSwitches,
@@ -209,13 +228,13 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
         const storageSwitches = /** @type {SwitchItem[]} */([]);
         storageSwitches.push({
             role: 'Leaf',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: storageLeaf,
             desc: `${leafDownlinkPorts}下行+${leafDownlinkPorts}上行 400G`
         });
         storageSwitches.push({
             role: 'Spine',
-            model: 'RG-S6990-128QC2XS',
+            model: switchModel,
             count: storageSpine,
             desc: `${leafDownlinkPorts * 2} 400G全互联`
         });

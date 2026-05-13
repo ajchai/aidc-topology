@@ -1,4 +1,4 @@
-/**
+﻿/**
  * app.js - 主入口
  * 整合所有模块，完成初始化与事件绑定
  */
@@ -68,6 +68,7 @@ export async function generateTopology() {
         const storageNicSelect = document.getElementById('storageNic');
         const storageNicCountSelect = document.getElementById('storageNicCount');
         const architectureSelect = document.getElementById('architecture');
+        const switchModelSelect = document.getElementById('switchModel');
 
         if (!serverCountInput || !gpuSelect) {
             console.error('Required DOM elements not found');
@@ -87,6 +88,10 @@ export async function generateTopology() {
         const storageNic = storageNicSelect?.value || 'CX7_400G';
         const storageNicCount = parseInt(storageNicCountSelect?.value) || 2;
         const architecture = architectureSelect?.value || 'virtual-dual-plane';
+        let switchModel = switchModelSelect?.value || 'RG-S6990-128QC2XS';
+        if (architecture === 'single-plane') {
+            switchModel = 'RG-S6990-64OC2XS';
+        }
 
         // 同步输入框（如果输入了非法值）
         if (String(serverCount) !== String(rawCount)) {
@@ -101,6 +106,7 @@ export async function generateTopology() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             linkStyle: { ...appState.linkStyle }
         };
 
@@ -115,6 +121,7 @@ export async function generateTopology() {
             storageNic,
             storageNicCount,
             architecture,
+            switchModel,
             cachedHardwareData: null
         });
 
@@ -194,6 +201,7 @@ function bindInputEvents() {
     const storageNicSelect = document.getElementById('storageNic');
     const storageNicCountSelect = document.getElementById('storageNicCount');
     const architectureSelect = document.getElementById('architecture');
+    const switchModelSelect = document.getElementById('switchModel');
 
     if (serverCountSelect) {
         serverCountSelect.addEventListener('change', onServerCountChange);
@@ -226,6 +234,33 @@ function bindInputEvents() {
 
     if (architectureSelect) {
         architectureSelect.addEventListener('change', () => {
+            const arch = architectureSelect.value;
+            const switchModelWrapper = document.getElementById('switchModelWrapper');
+            const switchModelSelect = document.getElementById('switchModel');
+
+            if (switchModelWrapper && switchModelSelect) {
+                if (arch === 'single-plane') {
+                    // 单平面：显示交换机选型，但禁用并强制设置为RG-S6990-64OC2XS
+                    switchModelWrapper.style.display = '';
+                    switchModelSelect.value = 'RG-S6990-64OC2XS';
+                    switchModelSelect.disabled = true;
+                } else {
+                    switchModelWrapper.style.display = '';
+                    switchModelSelect.disabled = false;
+                    // 切回双平面时，如果当前被锁定为单平面型号，恢复默认双平面型号
+                    if (switchModelSelect.value === 'RG-S6990-64OC2XS') {
+                        switchModelSelect.value = 'RG-S6990-128QC2XS';
+                    }
+                }
+            }
+
+            clearHardwareCache();
+            generateTopology();
+        });
+    }
+
+    if (switchModelSelect) {
+        switchModelSelect.addEventListener('change', () => {
             clearHardwareCache();
             generateTopology();
         });
@@ -270,6 +305,7 @@ function syncUIFromState() {
     const storageNicSelect = document.getElementById('storageNic');
     const storageNicCountSelect = document.getElementById('storageNicCount');
     const architectureSelect = document.getElementById('architecture');
+    const switchModelSelect = document.getElementById('switchModel');
     const sidebar = document.getElementById('sidebar');
     const hwPanel = document.getElementById('hwFloatPanel');
 
@@ -281,6 +317,20 @@ function syncUIFromState() {
     if (storageNicSelect) storageNicSelect.value = appState.storageNic;
     if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
     if (architectureSelect) architectureSelect.value = appState.architecture;
+    if (switchModelSelect) switchModelSelect.value = appState.switchModel;
+
+    // 同步交换机选型显示状态
+    const switchModelWrapper = document.getElementById('switchModelWrapper');
+    if (switchModelWrapper && architectureSelect && switchModelSelect) {
+        if (architectureSelect.value === 'single-plane') {
+            switchModelWrapper.style.display = '';
+            switchModelSelect.value = 'RG-S6990-64OC2XS';
+            switchModelSelect.disabled = true;
+        } else {
+            switchModelWrapper.style.display = '';
+            switchModelSelect.disabled = false;
+        }
+    }
 
     // 恢复连线样式控件
     const linkOpacityRange = document.getElementById('linkOpacity');

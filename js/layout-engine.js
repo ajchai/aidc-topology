@@ -1,4 +1,4 @@
-/**
+﻿/**
  * layout-engine.js - 布局计算引擎
  * 负责坐标计算、POD 划分、压缩显示策略
  * 输出纯数据结构，供 svg-renderer.js 消费
@@ -96,7 +96,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
     const cm = hwData.compute.meta;
     const actualSpineCount = cm.spineSwitches;
     const podCount = cm.podCount;
-    const leafPairsPerPod = Math.ceil(cm.leafSwitches / podCount / 2);
+    const leafGroupsPerPod = isSinglePlane ? Math.ceil(cm.leafSwitches / podCount) : Math.ceil(cm.leafSwitches / podCount / 2);
 
     const spineY = LAYOUT.spineY;
     const leafY = LAYOUT.leafY;
@@ -323,15 +323,16 @@ export function calcLayout(serverCount, gpuType, options = {}) {
             fontSize: 16, fill: '#cbd5e1', fontWeight: 'bold',
             fontFamily: "'Inter','Microsoft YaHei',sans-serif"
         };
+        const leafCountDisplay = isSinglePlane ? leafGroupsPerPod : leafGroupsPerPod * 2;
         podLayout.podSubLabel = {
             x: podX + 50, y: leafY - 48,
-            text: `包含 ${leafPairsPerPod * 2}台 Leaf, 下联 ${Math.min(cm.serversPerPod, serverCount - p * cm.serversPerPod)}台 算力节点`,
+            text: `包含 ${leafCountDisplay}台 Leaf, 下联 ${Math.min(cm.serversPerPod, serverCount - p * cm.serversPerPod)}台 算力节点`,
             fontSize: 11, fill: '#64748b',
             fontFamily: "'Inter','Microsoft YaHei',sans-serif"
         };
 
         // Leaf 层
-        const leafPositions = buildCompressedPositions(leafPairsPerPod);
+        const leafPositions = buildCompressedPositions(leafGroupsPerPod);
         const leafGapCount = leafPositions.filter(p => p.type === 'gap').length;
         const normalLeafCount = leafPositions.filter(p => p.type === 'item').length;
         const availableLeafWidth = podWidth - LAYOUT.podPadding * 2;
@@ -360,7 +361,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                 podLayout.leafNodes.push({
                     type: 'gap',
                     count: pos.count,
-                    totalCount: leafPairsPerPod,
+                    totalCount: leafGroupsPerPod,
                     x: cx - 55, y: leafY + 5,
                     width: 110, height: 40,
                     podIndex: p
@@ -381,29 +382,31 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                 y: leafY,
                 l1Id,
                 l2Id,
-                l1Label: `L1-${idx}`,
+                l1Label: isSinglePlane ? `Leaf-${idx}` : `L1-${idx}`,
                 l2Label: `L2-${idx}`,
-                p1x: cx - 45,
-                p2x: cx + 45,
+                p1x: isSinglePlane ? cx : cx - 45,
+                p2x: isSinglePlane ? cx : cx + 45,
                 bottomY: leafY + 50,
                 podIndex: p,
-                tooltipL1: `<b>L1-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面1)<br>上行: 64<br>下行: 64`,
+                tooltipL1: isSinglePlane
+                    ? `<b>Leaf-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (单平面)<br>上行: 32<br>下行: 32`
+                    : `<b>L1-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面1)<br>上行: 64<br>下行: 64`,
                 tooltipL2: `<b>L2-${idx}</b><br>所在 POD: ${p + 1}<br>角色: Leaf (平面2)<br>上行: 64<br>下行: 64`
             };
             podLayout.leafNodes.push(node);
-            leafNodes.push({ id: idx, p1x: cx - 45, p2x: cx + 45, y: leafY + 50, l1Id, l2Id });
+            leafNodes.push({ id: idx, p1x: isSinglePlane ? cx : cx - 45, p2x: isSinglePlane ? cx : cx + 45, y: leafY + 50, l1Id, l2Id });
 
             // 到 Spine 的连线
             spineNodes.forEach(sp => {
                 if (sp.type === 'gap') return;
 
                 if (isSinglePlane) {
-                    // 单平面：仅蓝色连线
+                    // 单平面：仅蓝色连线，从Leaf中心到Spine中心
                     links.push({
-                        x1: cx - 45, y1: leafY,
+                        x1: cx, y1: leafY,
                         x2: sp.p1x, y2: sp.bottomY,
                         color: '#3b82f6',
-                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l1Id} dev-${sp.id} ${sp.id}`
                     });
                 } else {
                     // 双平面：蓝色+橙色连线
@@ -411,13 +414,13 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                         x1: cx - 45, y1: leafY,
                         x2: sp.p1x, y2: sp.bottomY,
                         color: '#3b82f6',
-                        classes: `${l1Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l1Id} dev-${sp.id} ${sp.id}`
                     });
                     links.push({
                         x1: cx + 45, y1: leafY,
                         x2: sp.p2x, y2: sp.bottomY,
                         color: '#f97316',
-                        classes: `${l2Id} dev-spine_${sp.id} spine_${sp.id}`
+                        classes: `${l2Id} dev-${sp.id} ${sp.id}`
                     });
                 }
             });
@@ -469,7 +472,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                     const linkClasses = `${srvId} dev-${targetLeaf.l1Id} dev-${targetLeaf.l2Id}`;
 
                     if (isSinglePlane) {
-                        // 单平面：仅蓝色连线
+                        // 单平面：仅蓝色连线，从Server端口到Leaf中心
                         links.push({
                             x1: portX, y1: portY - 14,
                             x2: targetLeaf.p1x, y2: targetLeaf.y,

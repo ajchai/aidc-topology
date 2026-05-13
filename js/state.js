@@ -38,6 +38,7 @@ export const appState = {
     storageNic: 'CX7_400G',             // 存储网卡配置
     storageNicCount: 2,                  // 存储网卡数量
     architecture: 'virtual-dual-plane',  // 组网架构
+    switchModel: 'RG-S6990-128QC2XS',     // 交换机选型
     viewBox: { ...LAYOUT.viewBoxDefault },
     cachedHardwareData: null,
     cachedServerCount: null,  // 用于判断缓存是否命中

@@ -95,8 +95,10 @@ function showTooltip(evt, html) {
     if (!tt) return;
     tt.innerHTML = html;
     tt.style.display = 'block';
-    tt.style.left = (evt.pageX + 15) + 'px';
-    tt.style.top = (evt.pageY + 15) + 'px';
+
+    const parentRect = tt.offsetParent.getBoundingClientRect();
+    tt.style.left = (evt.clientX - parentRect.left + 15) + 'px';
+    tt.style.top = (evt.clientY - parentRect.top + 15) + 'px';
     tt.style.opacity = '1';
 }
 
@@ -222,8 +224,9 @@ function onSvgMouseOut(e) {
 function onSvgMouseMove(e) {
     const tt = tooltipEl();
     if (tt && tt.style.opacity === '1') {
-        tt.style.left = (e.pageX + 15) + 'px';
-        tt.style.top = (e.pageY + 15) + 'px';
+        const parentRect = tt.offsetParent.getBoundingClientRect();
+        tt.style.left = (e.clientX - parentRect.left + 15) + 'px';
+        tt.style.top = (e.clientY - parentRect.top + 15) + 'px';
     }
 }
 

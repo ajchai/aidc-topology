@@ -20,6 +20,12 @@ export const SWITCH_SPECS = Object.freeze({
         uplinkPorts: 64,
         portSpeed: '400G',
         desc: '64下行+64上行 400G'
+    },
+    'RG-S6990-64OC2XS': {
+        downlinkPorts: 32,
+        uplinkPorts: 32,
+        portSpeed: '400G',
+        desc: '32下行+32上行 400G'
     }
 });
 
