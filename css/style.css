@@ -682,3 +682,16 @@ select:focus {
 .rounded-lg { border-radius: 8px; }
 .border { border: 1px solid #334155; }
 .border-b { border-bottom: 1px solid #1e293b; }
+
+/* ==========================================
+   版权声明
+   ========================================== */
+.copyright {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 10px;
+    color: #475569;
+    pointer-events: none;
+    z-index: 5;
+}

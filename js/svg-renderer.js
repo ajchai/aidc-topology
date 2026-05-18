@@ -73,7 +73,8 @@ function renderBgLayer(layer, layout) {
                 'font-family': item.fontFamily,
                 'font-size': item.fontSize,
                 fill: item.fill,
-                'font-weight': item.fontWeight
+                'font-weight': item.fontWeight,
+                'text-anchor': item.textAnchor || 'start'
             }));
         } else if (item.type === 'line') {
             frag.appendChild(createSVG('line', {
@@ -125,13 +126,27 @@ function renderLinkLayer(layer, layout, linkStyle = {}) {
     const strokeWidth = linkStyle.strokeWidth ?? 1.5;
     const frag = document.createDocumentFragment();
     for (const link of layout.links) {
-        const offset = Math.abs(link.y2 - link.y1) * 0.4;
-        const d = `M ${link.x1} ${link.y1} C ${link.x1} ${link.y1 - offset}, ${link.x2} ${link.y2 + offset}, ${link.x2} ${link.y2}`;
-        frag.appendChild(createSVG('path', {
-            d, stroke: link.color, 'stroke-width': String(strokeWidth), fill: 'none',
-            class: `link-line ${link.classes}`,
-            style: `opacity:${opacity}`
-        }));
+        if (link.classes && link.classes.includes('escape-link')) {
+            // 逃生链路：红色弧线，从 Spine 顶部向上拱起
+            const arcOffset = link.arcOffset || 50;
+            const d = `M ${link.x1} ${link.y1} C ${link.x1} ${link.y1 - arcOffset}, ${link.x2} ${link.y2 - arcOffset}, ${link.x2} ${link.y2}`;
+            frag.appendChild(createSVG('path', {
+                d,
+                stroke: link.color,
+                'stroke-width': '2.5',
+                fill: 'none',
+                class: `link-line ${link.classes}`,
+                style: `opacity:0.9`
+            }));
+        } else {
+            const offset = Math.abs(link.y2 - link.y1) * 0.4;
+            const d = `M ${link.x1} ${link.y1} C ${link.x1} ${link.y1 - offset}, ${link.x2} ${link.y2 + offset}, ${link.x2} ${link.y2}`;
+            frag.appendChild(createSVG('path', {
+                d, stroke: link.color, 'stroke-width': String(strokeWidth), fill: 'none',
+                class: `link-line ${link.classes}`,
+                style: `opacity:${opacity}`
+            }));
+        }
     }
     layer.innerHTML = '';
     layer.appendChild(frag);
@@ -326,6 +341,128 @@ function renderPhysicalSpine(node) {
         x2: node.x + w - 4, y2: node.y + h / 2,
         stroke: '#475569', 'stroke-width': 1, 'stroke-dasharray': '2,2'
     }));
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
+ * 创建物理双平面 P1 Spine（纯蓝色）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderPhysicalSpineP1(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    const w = node.width;
+    const h = node.height;
+
+    // 整体蓝色盒子
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: w, height: h,
+        rx: 8, fill: '#0f172a', stroke: '#3b82f6', 'stroke-width': 2.5,
+        filter: 'url(#shadow)'
+    }));
+    // 顶部高光
+    g.appendChild(createSVG('line', {
+        x1: node.x + 3, y1: node.y + 2,
+        x2: node.x + w - 3, y2: node.y + 2,
+        stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1
+    }));
+    // 内部蓝色填充
+    const pad = 6;
+    g.appendChild(createSVG('rect', {
+        x: node.x + pad, y: node.y + 14,
+        width: w - pad * 2, height: h - 24,
+        rx: 4, fill: 'url(#grad-blue)', stroke: '#3b82f6',
+        'stroke-width': 1, opacity: 0.95
+    }));
+    // 标签
+    g.appendChild(createText(node.x + 6, node.y + 12, 'P1', {
+        'font-size': 7, fill: '#94a3b8', 'font-weight': 700, 'letter-spacing': 0.5
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 2 - 2, node.label || '', {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+
+    // 端口指示灯
+    const portCount = 10;
+    const portSpacing = (w - 20) / portCount;
+    for (let i = 0; i < portCount; i++) {
+        const px = node.x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        g.appendChild(createSVG('rect', {
+            x: px, y: node.y + h - 8,
+            width: 4, height: 4, fill: '#60a5fa',
+            class: 'led-blink', rx: 0.5
+        }));
+    }
+
+    frag.appendChild(g);
+    return frag;
+}
+
+/**
+ * 创建物理双平面 P2 Spine（纯黄色/橙色）
+ * @param {SpineNode} node
+ * @returns {DocumentFragment}
+ */
+function renderPhysicalSpineP2(node) {
+    const frag = document.createDocumentFragment();
+    const g = createSVG('g', {
+        id: `dev-${node.id}`,
+        class: `device-group dev-${node.id}`,
+        'data-id': node.id,
+        'data-tooltip': node.tooltip
+    });
+
+    const w = node.width;
+    const h = node.height;
+
+    // 整体黄色/橙色盒子
+    g.appendChild(createSVG('rect', {
+        x: node.x, y: node.y, width: w, height: h,
+        rx: 8, fill: '#0f172a', stroke: '#fbbf24', 'stroke-width': 2.5,
+        filter: 'url(#shadow)'
+    }));
+    // 顶部高光
+    g.appendChild(createSVG('line', {
+        x1: node.x + 3, y1: node.y + 2,
+        x2: node.x + w - 3, y2: node.y + 2,
+        stroke: 'rgba(255,255,255,0.15)', 'stroke-width': 1
+    }));
+    // 内部黄色填充
+    const pad = 6;
+    g.appendChild(createSVG('rect', {
+        x: node.x + pad, y: node.y + 14,
+        width: w - pad * 2, height: h - 24,
+        rx: 4, fill: 'url(#grad-orange)', stroke: '#fbbf24',
+        'stroke-width': 1, opacity: 0.95
+    }));
+    // 标签
+    g.appendChild(createText(node.x + 6, node.y + 12, 'P2', {
+        'font-size': 7, fill: '#fbbf24', 'font-weight': 700, 'letter-spacing': 0.5
+    }));
+    g.appendChild(createText(node.x + w / 2, node.y + h / 2 - 2, node.label || '', {
+        'font-size': 10, fill: '#fff', 'font-weight': 700, 'text-anchor': 'middle'
+    }));
+
+    // 端口指示灯
+    const portCount = 10;
+    const portSpacing = (w - 20) / portCount;
+    for (let i = 0; i < portCount; i++) {
+        const px = node.x + 10 + i * portSpacing + portSpacing / 2 - 2;
+        g.appendChild(createSVG('rect', {
+            x: px, y: node.y + h - 8,
+            width: 4, height: 4, fill: '#fbbf24',
+            class: 'led-blink', rx: 0.5
+        }));
+    }
 
     frag.appendChild(g);
     return frag;
@@ -555,6 +692,10 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
             frag.appendChild(renderVirtualSpine(sp));
         } else if (sp.type === 'physicalSpine') {
             frag.appendChild(renderPhysicalSpine(sp));
+        } else if (sp.type === 'physicalSpineP1') {
+            frag.appendChild(renderPhysicalSpineP1(sp));
+        } else if (sp.type === 'physicalSpineP2') {
+            frag.appendChild(renderPhysicalSpineP2(sp));
         } else if (sp.type === 'singleSpine') {
             frag.appendChild(renderSingleSpine(sp));
         }
@@ -593,7 +734,8 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
                 for (let rail = 0; rail < railCount; rail++) {
                     const portX = srv.x + portGroupSpacing * (rail + 1);
                     const portY = srv.y;
-                    const targetLeafGroupIdx = (railCount === 8) ? (rail + 1) : Math.floor(rail * (8 / railCount)) + 1;
+                    const leafGroupsPerPod = layout.leafGroupsPerPod || 8;
+                    const targetLeafGroupIdx = Math.min(Math.floor(rail * leafGroupsPerPod / railCount) + 1, leafGroupsPerPod);
                     const isTargetVisible = layout.visibleLeafGroupIds.has(targetLeafGroupIdx);
 
                     if (isTargetVisible) {
@@ -624,7 +766,7 @@ function renderNodeLayer(layer, layout, serverCount, railCount, options = {}) {
                             }));
                         }
 
-                        if (rail === 0 || rail === railCount - 1) {
+                        if ((rail === 0 || rail === railCount - 1) && !isSinglePlane) {
                             frag.appendChild(createLACPBadge(portX, portY - 40));
                         }
                     } else {

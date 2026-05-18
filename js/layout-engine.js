@@ -8,7 +8,7 @@ import { LAYOUT, ARCHITECTURE, ARCHITECTURE_TYPES, GPU_SPECS, COMPUTE_NIC_SPECS 
 import { calcHardware } from './hardware-engine.js';
 
 /** @typedef {{ type: 'rect'|'text'|'line', [key:string]: any }} BgElement */
-/** @typedef {{ type: 'virtualSpine'|'physicalSpine'|'singleSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
+/** @typedef {{ type: 'virtualSpine'|'physicalSpine'|'physicalSpineP1'|'physicalSpineP2'|'singleSpine'|'gap', idx?: number, count?: number, x: number, y: number, width: number, height: number, id?: string, label?: string, tooltip?: string, p1x?: number, p2x?: number, bottomY?: number }} SpineNode */
 /** @typedef {{ type: 'leafPair'|'gap', groupIdx?: number, count?: number, x: number, y: number, l1Id: string, l2Id: string, l1Label: string, l2Label: string, p1x: number, p2x: number, bottomY: number, podIndex: number, tooltipL1: string, tooltipL2: string }} LeafNode */
 /** @typedef {{ type: 'server'|'gap'|'ellipsis', idx?: string, x: number, y: number, width: number, height: number, id: string, label: string, tooltip: string, railCount: number }} ServerNode */
 /** @typedef {{ x1: number, y1: number, x2: number, y2: number, color: string, classes: string }} LinkSegment */
@@ -170,93 +170,245 @@ export function calcLayout(serverCount, gpuType, options = {}) {
     }
 
     // ===== 2. Spine 节点位置计算 =====
-    const spinePositions = buildCompressedPositions(actualSpineCount);
-    const spineGapCount = spinePositions.filter(p => p.type === 'gap').length;
-    const normalSpineCount = spinePositions.filter(p => p.type === 'item').length;
-    const availableSpineWidth = spineBoxWidth;
-    const normalSpineWidth = spineGapCount > 0 && normalSpineCount > 0
-        ? (availableSpineWidth - spineGapCount * LAYOUT.spineGapWidth) / normalSpineCount
-        : availableSpineWidth / spinePositions.length;
+    if (isPhysicalDual) {
+        const spinesPerPlane = actualSpineCount / 2;
+        const halfBoxWidth = spineBoxWidth / 2;
+        const planeGap = 100; // P1/P2 两组之间的间隙
 
-    // 累加计算每个 spine 位置的中心 x
-    const spineLayoutInfos = [];
-    let currentSpineX = 200;
-    for (const pos of spinePositions) {
-        const width = pos.type === 'gap' ? LAYOUT.spineGapWidth : normalSpineWidth;
-        const cx = currentSpineX + width / 2;
-        spineLayoutInfos.push({ ...pos, cx, width });
-        currentSpineX += width;
-    }
+        // --- P1 布局（左半区，蓝色） ---
+        const p1Positions = buildCompressedPositions(spinesPerPlane);
+        const p1GapCount = p1Positions.filter(p => p.type === 'gap').length;
+        const p1NormalCount = p1Positions.filter(p => p.type === 'item').length;
+        const p1AvailableWidth = halfBoxWidth - planeGap / 2;
+        const p1NormalWidth = p1GapCount > 0 && p1NormalCount > 0
+            ? (p1AvailableWidth - p1GapCount * LAYOUT.spineGapWidth) / p1NormalCount
+            : p1AvailableWidth / p1Positions.length;
 
-    for (let vi = 0; vi < spinePositions.length; vi++) {
-        const pos = spinePositions[vi];
-        const info = spineLayoutInfos[vi];
-        const cx = info.cx;
-
-        if (pos.type === 'gap') {
-            spineNodes.push({
-                type: 'gap',
-                count: pos.count,
-                totalCount: actualSpineCount,
-                x: cx - 60, y: spineY - 5,
-                width: 120, height: 40
-            });
-            continue;
+        const p1LayoutInfos = [];
+        let currentP1X = 200;
+        for (const pos of p1Positions) {
+            const width = pos.type === 'gap' ? LAYOUT.spineGapWidth : p1NormalWidth;
+            const cx = currentP1X + width / 2;
+            p1LayoutInfos.push({ ...pos, cx, width });
+            currentP1X += width;
         }
 
-        const idx = pos.idx;
+        // --- P2 布局（右半区，黄色/橙色） ---
+        const p2Positions = buildCompressedPositions(spinesPerPlane);
+        const p2GapCount = p2Positions.filter(p => p.type === 'gap').length;
+        const p2NormalCount = p2Positions.filter(p => p.type === 'item').length;
+        const p2AvailableWidth = halfBoxWidth - planeGap / 2;
+        const p2NormalWidth = p2GapCount > 0 && p2NormalCount > 0
+            ? (p2AvailableWidth - p2GapCount * LAYOUT.spineGapWidth) / p2NormalCount
+            : p2AvailableWidth / p2Positions.length;
+
+        const p2LayoutInfos = [];
+        let currentP2X = 200 + halfBoxWidth + planeGap / 2;
+        for (const pos of p2Positions) {
+            const width = pos.type === 'gap' ? LAYOUT.spineGapWidth : p2NormalWidth;
+            const cx = currentP2X + width / 2;
+            p2LayoutInfos.push({ ...pos, cx, width });
+            currentP2X += width;
+        }
+
         const spineW = LAYOUT.spineW;
         const spineH = LAYOUT.spineH;
+        const escapeLinks = [];
 
-        if (isVirtualDual) {
-            // 虚拟双平面：一台物理机内VRF分区
+        // 生成 P1 节点
+        for (let vi = 0; vi < p1Positions.length; vi++) {
+            const pos = p1Positions[vi];
+            const info = p1LayoutInfos[vi];
+            const cx = info.cx;
+
+            if (pos.type === 'gap') {
+                spineNodes.push({
+                    type: 'gap',
+                    count: pos.count,
+                    totalCount: spinesPerPlane,
+                    x: cx - 60, y: spineY - 5,
+                    width: 120, height: 40
+                });
+                continue;
+            }
+
+            const idx = pos.idx;
             spineNodes.push({
-                type: 'virtualSpine',
+                type: 'physicalSpineP1',
                 idx,
-                id: `spine_${idx}`,
-                x: cx - spineW / 2,
-                y: spineY - 25,
-                width: spineW,
-                height: spineH,
-                p1x: cx - 50,
-                p2x: cx + 50,
-                bottomY: spineY - 25 + spineH,
-                label: `Spine-${idx}`,
-                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
-            });
-        } else if (isPhysicalDual) {
-            // 物理双平面：独立P1/P2物理交换机
-            spineNodes.push({
-                type: 'physicalSpine',
-                idx,
-                id: `spine_${idx}`,
-                x: cx - spineW / 2 - 30,
-                y: spineY - 25,
-                width: spineW * 0.7,
-                height: spineH,
-                p1x: cx - 30,
-                p2x: cx + 30,
-                bottomY: spineY - 25 + spineH,
-                label: `Spine-${idx}`,
-                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理双平面交换机<br>平面1 (蓝色) / 平面2 (橙色)<br>独立物理设备<br>800G 端口`
-            });
-        } else {
-            // 单平面：仅蓝色
-            spineNodes.push({
-                type: 'singleSpine',
-                idx,
-                id: `spine_${idx}`,
+                id: `spine1_${idx}`,
                 x: cx - spineW / 2,
                 y: spineY - 25,
                 width: spineW,
                 height: spineH,
                 p1x: cx,
-                p2x: cx,  // 单平面只有一个连接点
                 bottomY: spineY - 25 + spineH,
-                label: `Spine-${idx}`,
-                tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>单平面交换机<br>800G 端口`
+                label: `Spine1-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine1-${idx}</div>物理双平面交换机<br>平面1 (蓝色)<br>独立物理设备<br>800G 端口`
             });
         }
+
+        // 生成 P2 节点
+        for (let vi = 0; vi < p2Positions.length; vi++) {
+            const pos = p2Positions[vi];
+            const info = p2LayoutInfos[vi];
+            const cx = info.cx;
+
+            if (pos.type === 'gap') {
+                spineNodes.push({
+                    type: 'gap',
+                    count: pos.count,
+                    totalCount: spinesPerPlane,
+                    x: cx - 60, y: spineY - 5,
+                    width: 120, height: 40
+                });
+                continue;
+            }
+
+            const idx = pos.idx;
+            spineNodes.push({
+                type: 'physicalSpineP2',
+                idx,
+                id: `spine2_${idx}`,
+                x: cx - spineW / 2,
+                y: spineY - 25,
+                width: spineW,
+                height: spineH,
+                p2x: cx,
+                bottomY: spineY - 25 + spineH,
+                label: `Spine2-${idx}`,
+                tooltip: `<div class="mb-1 font-semibold">Spine2-${idx}</div>物理双平面交换机<br>平面2 (黄色)<br>独立物理设备<br>800G 端口`
+            });
+        }
+
+        // 逃生链路：连接对应 idx 的可见 P1/P2 节点（从 Spine 顶部弧线连接）
+        const p1Visible = spineNodes.filter(s => s.type === 'physicalSpineP1');
+        const p2Visible = spineNodes.filter(s => s.type === 'physicalSpineP2');
+
+        for (let i = 0; i < p1Visible.length; i++) {
+            const p1 = p1Visible[i];
+            const p2 = p2Visible.find(s => s.idx === p1.idx);
+            if (p2) {
+                const visibleCount = Math.max(p1Visible.length, 1);
+                const arcOffset = 30 + (visibleCount > 1 ? (i * 70 / (visibleCount - 1)) : 0);
+                escapeLinks.push({
+                    x1: p1.x + p1.width / 2,
+                    y1: p1.y,
+                    x2: p2.x + p2.width / 2,
+                    y2: p2.y,
+                    color: '#ef4444',
+                    classes: 'escape-link',
+                    arcOffset
+                });
+            }
+        }
+
+        // 将逃生链路加入总链路集合
+        links.push(...escapeLinks);
+
+        // 在最高逃生链路弧线中间添加文字标注
+        if (escapeLinks.length > 0) {
+            const first = escapeLinks[0];
+            const midX = (first.x1 + first.x2) / 2;
+            const maxArcOffset = Math.max(...escapeLinks.map(l => l.arcOffset));
+            const labelY = first.y1 - maxArcOffset - 15;
+            bgElements.push({
+                type: 'text',
+                x: midX,
+                y: labelY,
+                text: '逃生链路',
+                fontSize: 10,
+                fill: '#ef4444',
+                fontWeight: 'bold',
+                textAnchor: 'middle'
+            });
+        }
+    } else {
+        // 原有逻辑：单平面 + 虚拟双平面
+        const spinePositions = buildCompressedPositions(actualSpineCount);
+        const spineGapCount = spinePositions.filter(p => p.type === 'gap').length;
+        const normalSpineCount = spinePositions.filter(p => p.type === 'item').length;
+        const availableSpineWidth = spineBoxWidth;
+        const normalSpineWidth = spineGapCount > 0 && normalSpineCount > 0
+            ? (availableSpineWidth - spineGapCount * LAYOUT.spineGapWidth) / normalSpineCount
+            : availableSpineWidth / spinePositions.length;
+
+        const spineLayoutInfos = [];
+        let currentSpineX = 200;
+        for (const pos of spinePositions) {
+            const width = pos.type === 'gap' ? LAYOUT.spineGapWidth : normalSpineWidth;
+            const cx = currentSpineX + width / 2;
+            spineLayoutInfos.push({ ...pos, cx, width });
+            currentSpineX += width;
+        }
+
+        for (let vi = 0; vi < spinePositions.length; vi++) {
+            const pos = spinePositions[vi];
+            const info = spineLayoutInfos[vi];
+            const cx = info.cx;
+
+            if (pos.type === 'gap') {
+                spineNodes.push({
+                    type: 'gap',
+                    count: pos.count,
+                    totalCount: actualSpineCount,
+                    x: cx - 60, y: spineY - 5,
+                    width: 120, height: 40
+                });
+                continue;
+            }
+
+            const idx = pos.idx;
+            const spineW = LAYOUT.spineW;
+            const spineH = LAYOUT.spineH;
+
+            if (isVirtualDual) {
+                spineNodes.push({
+                    type: 'virtualSpine',
+                    idx,
+                    id: `spine_${idx}`,
+                    x: cx - spineW / 2,
+                    y: spineY - 25,
+                    width: spineW,
+                    height: spineH,
+                    p1x: cx - 50,
+                    p2x: cx + 50,
+                    bottomY: spineY - 25 + spineH,
+                    label: `Spine-${idx}`,
+                    tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>物理交换机 (虚拟双平面)<br>平面1: VRF1 (蓝色)<br>平面2: VRF2 (橙色)<br>VRF逃生: 虚拟路径 (不占物理端口)<br>800G 端口`
+                });
+            } else {
+                // 单平面：仅蓝色
+                spineNodes.push({
+                    type: 'singleSpine',
+                    idx,
+                    id: `spine_${idx}`,
+                    x: cx - spineW / 2,
+                    y: spineY - 25,
+                    width: spineW,
+                    height: spineH,
+                    p1x: cx,
+                    p2x: cx,
+                    bottomY: spineY - 25 + spineH,
+                    label: `Spine-${idx}`,
+                    tooltip: `<div class="mb-1 font-semibold">Spine-${idx}</div>单平面交换机<br>800G 端口`
+                });
+            }
+        }
+    }
+
+    // 物理双平面超过512台时的提示标注
+    if (isPhysicalDual && serverCount > 512) {
+        bgElements.push({
+            type: 'text',
+            x: 200 + spineBoxWidth / 2,
+            y: spineY - 95,
+            text: '物理双平面组网最多支持960台算力服务器集群组网',
+            fontSize: 14,
+            fill: '#fbbf24',
+            fontWeight: 'bold',
+            textAnchor: 'middle'
+        });
     }
 
     // ===== 3. POD 层 =====
@@ -408,8 +560,25 @@ export function calcLayout(serverCount, gpuType, options = {}) {
                         color: '#3b82f6',
                         classes: `${l1Id} dev-${sp.id} ${sp.id}`
                     });
+                } else if (isPhysicalDual) {
+                    // 物理双平面：P1 Spine 接蓝色，P2 Spine 接橙色
+                    if (sp.type === 'physicalSpineP1') {
+                        links.push({
+                            x1: cx - 45, y1: leafY,
+                            x2: sp.p1x, y2: sp.bottomY,
+                            color: '#3b82f6',
+                            classes: `${l1Id} dev-${sp.id} ${sp.id}`
+                        });
+                    } else if (sp.type === 'physicalSpineP2') {
+                        links.push({
+                            x1: cx + 45, y1: leafY,
+                            x2: sp.p2x, y2: sp.bottomY,
+                            color: '#f97316',
+                            classes: `${l2Id} dev-${sp.id} ${sp.id}`
+                        });
+                    }
                 } else {
-                    // 双平面：蓝色+橙色连线
+                    // 虚拟双平面：蓝色+橙色连线
                     links.push({
                         x1: cx - 45, y1: leafY,
                         x2: sp.p1x, y2: sp.bottomY,
@@ -464,7 +633,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
             for (let rail = 0; rail < railCount; rail++) {
                 const portX = cx - LAYOUT.serverW / 2 + portGroupSpacing * (rail + 1);
                 const portY = serverY;
-                const targetLeafGroupIdx = (railCount === 8) ? (rail + 1) : Math.floor(rail * (8 / railCount)) + 1;
+                const targetLeafGroupIdx = Math.min(Math.floor(rail * leafGroupsPerPod / railCount) + 1, leafGroupsPerPod);
                 const isTargetVisible = visibleLeafGroupIds.has(targetLeafGroupIdx);
                 const targetLeaf = leafNodes.find(ln => ln.id === targetLeafGroupIdx);
 
@@ -508,6 +677,7 @@ export function calcLayout(serverCount, gpuType, options = {}) {
         pods,
         links,
         visibleLeafGroupIds,
-        architecture
+        architecture,
+        leafGroupsPerPod
     };
 }

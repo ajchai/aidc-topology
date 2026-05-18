@@ -95,6 +95,7 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
 
     const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
     const isSinglePlane = architecture === 'single-plane';
+    const isPhysicalDual = architecture === 'physical-dual-plane';
     const switchModel = isSinglePlane
         ? 'RG-S6990-64OC2XS'
         : (options.switchModel || 'RG-S6990-128QC2XS');
@@ -129,8 +130,12 @@ export function calcHardware(serverCount, gpuType = 'B300_SXM6', options = {}) {
     let coreSwitches = 0;
     let networkType = '';
 
-    if (serverCount <= ARCHITECTURE.TWO_TIER_MAX) {
+    if (serverCount <= ARCHITECTURE.TWO_TIER_MAX || isPhysicalDual) {
         spineSwitches = nextPowerOf2(Math.ceil(leafSwitches / 2));
+        // 物理双平面spine上限128台（单个平面64台）
+        if (isPhysicalDual && spineSwitches > 128) {
+            spineSwitches = 128;
+        }
         networkType = 'Two-Tier (Leaf-Spine)';
     } else {
         spineSwitches = leafSwitches;
