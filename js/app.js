@@ -35,12 +35,55 @@ function applyLinkStyle() {
  * @param {string|number} value
  * @returns {number}
  */
-const VALID_SERVER_COUNTS = [64, 128, 256, 512, 1024];
+const VALID_SERVER_COUNTS = [32, 64, 128, 256, 512, 960, 1024];
+const VALID_PHYSICAL_DUAL_COUNTS = [32, 64, 128, 256, 512, 960];
 
-function normalizeServerCount(value) {
+function normalizeServerCount(value, architecture = 'virtual-dual-plane') {
     const num = parseInt(String(value), 10);
+    if (architecture === 'physical-dual-plane') {
+        if (VALID_PHYSICAL_DUAL_COUNTS.includes(num)) return num;
+        return 128;
+    }
     if (VALID_SERVER_COUNTS.includes(num)) return num;
     return 128; // 默认值
+}
+
+/**
+ * 根据架构动态更新服务器数量下拉选项
+ * @param {string} architecture
+ */
+function updateServerCountOptions(architecture) {
+    const serverCountSelect = document.getElementById('serverCount');
+    if (!serverCountSelect) return;
+
+    const currentValue = serverCountSelect.value;
+
+    if (architecture === 'physical-dual-plane') {
+        serverCountSelect.innerHTML = `
+            <option value="32">32 台</option>
+            <option value="64">64 台</option>
+            <option value="128">128 台</option>
+            <option value="256">256 台</option>
+            <option value="512">512 台</option>
+            <option value="960">960 台</option>
+        `;
+        // 如果当前值不在新选项中，回退到最近的合法值
+        if (!VALID_PHYSICAL_DUAL_COUNTS.includes(parseInt(currentValue))) {
+            serverCountSelect.value = '960';
+        } else {
+            serverCountSelect.value = currentValue;
+        }
+    } else {
+        serverCountSelect.innerHTML = `
+            <option value="32">32 台</option>
+            <option value="64">64 台</option>
+            <option value="128">128 台</option>
+            <option value="256">256 台</option>
+            <option value="512">512 台</option>
+            <option value="1024">1024 台</option>
+        `;
+        serverCountSelect.value = currentValue;
+    }
 }
 
 /**
@@ -76,7 +119,6 @@ export async function generateTopology() {
         }
 
         const rawCount = serverCountInput.value;
-        const serverCount = normalizeServerCount(rawCount);
         const gpuType = gpuSelect.value;
         const gpuSpec = GPU_SPECS[gpuType] || GPU_SPECS.B300_SXM6;
         const railCount = gpuSpec.railCount;
@@ -93,9 +135,25 @@ export async function generateTopology() {
             switchModel = 'RG-S6990-64OC2XS';
         }
 
+        // 规范化服务器数量（需在 architecture 确定后调用）
+        const serverCount = normalizeServerCount(rawCount, architecture);
+
         // 同步输入框（如果输入了非法值）
         if (String(serverCount) !== String(rawCount)) {
             serverCountInput.value = String(serverCount);
+        }
+
+        // ⚠️ 校验：虚拟双平面 + RG-S6990-128QC2XS + 超过512台 → 弹窗提示
+        if (
+            architecture === 'virtual-dual-plane' &&
+            switchModel === 'RG-S6990-128QC2XS' &&
+            serverCount > 512
+        ) {
+            showWarningModal(
+                '规模超限提示',
+                '虚拟双平面两级组网最大规模为 <strong>512 台</strong>，超过 512 台建议选择<strong>物理双平面</strong>或 <strong>TH 6 交换机</strong>！'
+            );
+            // 仅提示，不阻断生成
         }
 
         // 构建选项对象
@@ -254,6 +312,9 @@ function bindInputEvents() {
                 }
             }
 
+            // 动态更新服务器数量选项
+            updateServerCountOptions(arch);
+
             clearHardwareCache();
             generateTopology();
         });
@@ -318,6 +379,11 @@ function syncUIFromState() {
     if (storageNicCountSelect) storageNicCountSelect.value = String(appState.storageNicCount);
     if (architectureSelect) architectureSelect.value = appState.architecture;
     if (switchModelSelect) switchModelSelect.value = appState.switchModel;
+
+    // 同步服务器数量下拉选项
+    if (architectureSelect) {
+        updateServerCountOptions(architectureSelect.value);
+    }
 
     // 同步交换机选型显示状态
     const switchModelWrapper = document.getElementById('switchModelWrapper');
@@ -406,6 +472,82 @@ function init() {
     });
 
     console.log('[AIDCTopology] Initialized', loaded ? '(settings loaded)' : '(defaults)');
+}
+
+/**
+ * 显示警告模态框
+ * @param {string} title - 标题
+ * @param {string} htmlMessage - 支持 HTML 的正文内容
+ */
+function showWarningModal(title, htmlMessage) {
+    // 复用已有的 modal，避免重复创建
+    let overlay = document.getElementById('warningModalOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'warningModalOverlay';
+        overlay.style.cssText = [
+            'position:fixed', 'inset:0', 'z-index:9999',
+            'display:flex', 'align-items:center', 'justify-content:center',
+            'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(2px)'
+        ].join(';');
+
+        const box = document.createElement('div');
+        box.style.cssText = [
+            'background:#1e2433', 'border:1px solid #f59e0b',
+            'border-radius:10px', 'padding:28px 32px', 'max-width:420px', 'width:90%',
+            'box-shadow:0 8px 32px rgba(0,0,0,0.6)', 'font-family:inherit'
+        ].join(';');
+
+        // 标题行（图标 + 文字）
+        const titleEl = document.createElement('div');
+        titleEl.id = 'warningModalTitle';
+        titleEl.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;';
+        titleEl.innerHTML = `
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+              <path d="M12 2L1 21h22L12 2z" fill="#f59e0b" stroke="#f59e0b" stroke-linejoin="round"/>
+              <path d="M12 9v5" stroke="#1e2433" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="12" cy="17" r="1" fill="#1e2433"/>
+            </svg>
+            <span style="color:#f59e0b;font-size:15px;font-weight:700;"></span>`;
+
+        // 正文
+        const msgEl = document.createElement('div');
+        msgEl.id = 'warningModalMsg';
+        msgEl.style.cssText = 'color:#d1d5db;font-size:14px;line-height:1.7;margin-bottom:22px;';
+
+        // 确认按钮
+        const btn = document.createElement('button');
+        btn.textContent = '我知道了';
+        btn.style.cssText = [
+            'display:block', 'margin:0 auto',
+            'padding:8px 32px', 'border-radius:6px',
+            'background:#f59e0b', 'color:#111', 'font-weight:700',
+            'font-size:14px', 'border:none', 'cursor:pointer',
+            'transition:background 0.15s'
+        ].join(';');
+        btn.onmouseover = () => { btn.style.background = '#fbbf24'; };
+        btn.onmouseout  = () => { btn.style.background = '#f59e0b'; };
+        btn.onclick = () => { overlay.style.display = 'none'; };
+
+        // 点击遮罩也可关闭
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.style.display = 'none';
+        });
+
+        box.appendChild(titleEl);
+        box.appendChild(msgEl);
+        box.appendChild(btn);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    }
+
+    // 更新内容
+    const titleSpan = overlay.querySelector('#warningModalTitle span');
+    const msgEl     = overlay.querySelector('#warningModalMsg');
+    if (titleSpan) titleSpan.textContent = title;
+    if (msgEl)     msgEl.innerHTML = htmlMessage;
+
+    overlay.style.display = 'flex';
 }
 
 // DOMReady 后启动
